@@ -1,4 +1,4 @@
-package avl;
+package AVLs;
 
 public class ElementNotFoundException extends RuntimeException
 

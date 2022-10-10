@@ -1,69 +1,51 @@
+package AVLs;
+
 import java.util.ArrayList;
 
-public class AVL<T extends Comparable<? super T>> {
+public class AVL_aloysus<T extends Comparable<? super T>> {
     private Node<T> root;
 
     // Constructor to construct the AVL tree from a generic array of items
-    public AVL(T[] items) {
+    public AVL_aloysus(T[] items){
         if (items.length == 0) throw new IllegalArgumentException("Empty item array!");
         root = new Node(items[0], 2);
-        for (int i = 1; i < items.length; i++) {
+        for (int i = 1; i < items.length; i++){
             insert(items[i]);
         }
     }
 
     // Method to perform the right rotation of a subtree with node as the root
-    private Node<T> rightRotate(Node<T> root){
-        // Find the ejected node
-        Node<T> ejected = root.neighbours[0].neighbours[1];
-
-        // Re-root the tree, maintaining link to old root
-        root.neighbours[0].neighbours[1] = root;
-        root = root.neighbours[0];
-
-        // Root.right now has ejected to the left of it
-        root.neighbours[1].neighbours[0] = ejected;
-
+    private Node<T> rightRotate(Node<T> node){
+        Node<T> root = node.neighbours[0];
+        node.neighbours[0] = root.neighbours[1];
+        root.neighbours[1] = node;
         return root;
     }
 
     // Method to perform the left rotation of a subtree with node as the root
-    private Node<T> leftRotate(Node<T> root) {
-        // Find the ejected node
-        Node<T> ejected = root.neighbours[1].neighbours[0];
-
-        // Re-root the tree, maintaining link to old root
-        root.neighbours[1].neighbours[0] = root;
-        root = root.neighbours[1];
-
-        // Root.left now has ejected to the right of it
-        root.neighbours[0].neighbours[1] = ejected;
-
+    private Node<T> leftRotate(Node<T> node){
+        Node<T> root = node.neighbours[1];
+        node.neighbours[1] = root.neighbours[0];
+        root.neighbours[0] = node;
         return root;
     }
 
-    // Method to get the minimum in a subtree with node as the root
-    private T getMin(Node<T> node) {return node.neighbours[0] == null ? node.getItem() : getMin(node.neighbours[0]);}
+    private Node<T> fixTree(T item, Node<T> root) {
+        int balance = getBalance(root);
 
-    // Method to balance subtree about root (intellij complained about repeated code)
-    // Only one rotation to the root will occur
-    private Node<T> balanceSubTree(Node<T> root) {
-        // Left subtree too tall
-        if (getBalance(root) > 1) {
-            // If Left-Right ==convert to=> Left-Left
-            if (getBalance(root.neighbours[0]) < 0) root.neighbours[0] = leftRotate(root.neighbours[0]);
-
-            // Left-Left => Balanced
-            root = rightRotate(root);
+        // left left
+        if (balance > 1 && item.compareTo(root.neighbours[0].getItem()) < 0) return rightRotate(root);
+        // right right
+        if (balance < -1 && item.compareTo(root.neighbours[1].getItem()) > 0) return leftRotate(root);
+        // left right
+        if (balance > 1 && item.compareTo(root.neighbours[0].getItem()) > 0) {
+            root.neighbours[0] = leftRotate(root.neighbours[0]);
+            return rightRotate(root);
         }
-
-        // Right subtree to tall
-        else if (getBalance(root) < -1) {
-            // If Right-Left ==convert to=> Right-Right
-            if (getBalance(root.neighbours[0]) > 0) root.neighbours[1] = rightRotate(root.neighbours[1]);
-
-            // Right-Right => Balanced
-            root = leftRotate(root);
+        // right left
+        if (balance < -1 && item.compareTo(root.neighbours[1].getItem()) < 0) {
+            root.neighbours[1] = rightRotate(root.neighbours[1]);
+            return leftRotate(root);
         }
 
         return root;
@@ -71,52 +53,61 @@ public class AVL<T extends Comparable<? super T>> {
 
     // Method to insert an item into an AVL tree
     // Recursive auxiliary method utilised to help return the result
-    public void insert(T item){ root = insert(new Node(item, 2), root);  }
-    private Node<T> insert(Node<T> item, Node<T> root) {
-        // Reached Insertion Point: Let root be item to trigger re-balancing
-        if (root == null) root = item;
+    public void insert(T item){ root = insert(item, root); }
+    private Node<T> insert(T item, Node<T> curr) {
+        if (curr == null) return new Node<T>(item, 2);
 
-        // Recurse down to point of insertion
-        if (item.getItem().compareTo(root.getItem()) < 0) root.neighbours[0] = insert(item, root.neighbours[0]);
-        if (item.getItem().compareTo(root.getItem()) > 0) root.neighbours[1] = insert(item, root.neighbours[1]);
+        if (item.compareTo(curr.getItem()) < 0) {
+            curr.neighbours[0] = insert(item, curr.neighbours[0]);
+        }
+        else if (item.compareTo(curr.getItem()) > 0){
+            curr.neighbours[1] = insert(item,curr.neighbours[1]);
+        }
 
-        // Balance Tree and return up
-        return balanceSubTree(root);
+        return fixTree(item, curr);
     }
 
     // Method to delete an item from an AVL tree
     // Recursive auxiliary method utilised to help return the result
     public void delete(T item){ root = delete(item, root); }
-    private Node<T> delete(T item, Node<T> root) {
+    private Node<T> delete(T item, Node<T> curr){
+        if (curr == null) throw new ElementNotFoundException("AVL Tree");
 
-        // Corner case: if item does not exist (will hit null node)
-        if (root == null) return null;
+        Node<T> left = curr.neighbours[0];
+        Node<T> right = curr.neighbours[1];
 
-        // Recurse down only if you haven't found yet
-        if (root.getItem().compareTo(item) > 0) root.neighbours[0] = delete(item, root.neighbours[0]);
-        if (root.getItem().compareTo(item) < 0) root.neighbours[1] = delete(item, root.neighbours[1]);
+        if (item.compareTo(curr.getItem()) < 0) curr.neighbours[0] = delete(item, left);
+        else if (item.compareTo(curr.getItem()) > 0) curr.neighbours[1] = delete(item, right);
+        else {
+            // one or no children
+            if (left == null || right == null) {
+                Node<T> temp;
+                temp = (left != null) ? left : right;
+                // temp will be null if both children are null
+                // if one child exists, temp will become that children.
 
-        // If it is node to remove
-        if (root.getItem().compareTo(item) == 0) {
-            // Right subtree does not exist, just attach left subtree
-            if (root.neighbours[1] == null) root = root.neighbours[0];
-
-            // Left subtree does not exist, just attach right subtree
-            else if (root.neighbours[0] == null) root = root.neighbours[1];
-
-            // Both subtrees exist replace with inorder successor
+                curr = temp;
+            }
             else {
-                // Substitute the in-order successor's value
-                root.setItem(getMin(root.neighbours[1]));
-
-                // Delete the actual in-order successor node
-                delete(root.getItem(), root.neighbours[1]);
+                // replace curr with inorder successor which is the smallest in the right subtree which always exists
+                Node<T> temp = getMinNode(right);
+                curr.setItem(temp.getItem());
+                curr.neighbours[1] = delete(temp.getItem(), right);
             }
         }
 
-        // Balance Tree and return up
-        return balanceSubTree(root);
+        return fixTree(item, curr);
     }
+
+    private Node<T> getMinNode(Node<T> root) {
+        while (root.neighbours[0] != null) {
+            root = root.neighbours[0];
+        }
+
+        return root;
+    }
+
+
 
     //---------------- DO NOT EDIT THE FOLLOWING METHODS ---------------------
     // You may use the following methods as you see fit to help you out
