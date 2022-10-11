@@ -15,6 +15,7 @@ public class AVL_YX<T extends Comparable<? super T>> {
     }
 
     // Method to perform the right rotation of a subtree with node as the root
+
     private Node<T> rightRotate(Node<T> root){
         // Find the ejected node
         Node<T> ejected = root.neighbours[0].neighbours[1];
@@ -112,7 +113,7 @@ public class AVL_YX<T extends Comparable<? super T>> {
                 root.setItem(getMin(root.neighbours[1]));
 
                 // Delete the actual in-order successor node
-                delete(root.getItem(), root.neighbours[1]);
+                root.neighbours[1] = delete(root.getItem(), root.neighbours[1]);
             }
         }
 
