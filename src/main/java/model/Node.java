@@ -1,7 +1,7 @@
 package model;
 
 public class Node<T> {
-    private T item;
+    protected T item;
     public Node<T>[] neighbours; //Package accessibility
 
     // Constructor to create model.Node containing item of generic class T
