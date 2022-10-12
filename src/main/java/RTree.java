@@ -20,10 +20,7 @@ public class RTree<T> {
     private final int numDims;
     private int size;
 
-    private RTree<T>[] skipptrs;
-
     private Node root;
-
 
     public RTree(int maxEntries, int minEntries, int numDims) {
         if (minEntries * 2 > maxEntries) throw new IllegalArgumentException("minEntries太大");
@@ -59,8 +56,8 @@ public class RTree<T> {
      * @return list of entries of objects in query range
      */
     public List<T> search(double[] coords, double[] dimensions) {
-        if (coords.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
+        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         LinkedList<T> results = new LinkedList<T>();
         search(coords, dimensions, root, results); // Actual Recursive function
@@ -68,8 +65,8 @@ public class RTree<T> {
     }
 
     private void search(double[] coords, double[] dimensions, Node n, LinkedList<T> results) {
-        if (coords.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
+        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         if (n.leaf) // If leaf, add the children
             for (Node e: n.children) {
@@ -98,8 +95,8 @@ public class RTree<T> {
      * @return true if the entry was deleted from the RTree.
      */
     public boolean delete(double[] coords, double[] dimensions, T entry) {
-        if (coords.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
+        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         Node l = findLeaf(root, coords, dimensions, entry);
         if (!l.leaf) throw new IllegalStateException("Leaf not found");
@@ -124,8 +121,8 @@ public class RTree<T> {
     }
 
     private Node findLeaf(Node n, double[] coords, double[] dimensions, T entry) {
-        if (coords.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
+        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         if (n.leaf)
             for (Node c: n.children) {
@@ -193,8 +190,8 @@ public class RTree<T> {
      * @param entry the entry to insert
      */
     public void insert(double[] coords, double[] dimensions, T entry) {
-        if (coords.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
+        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         Entry e = new Entry(coords, dimensions, entry);
         Node l = chooseLeaf(root, e);
