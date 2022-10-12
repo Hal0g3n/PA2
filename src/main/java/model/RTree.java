@@ -46,7 +46,7 @@ public class RTree<T extends Comparable<T>> {
                 -2.0f * Math.sqrt(Double.MAX_VALUE)
             );
 
-        return new RTreeNode<T>(new ArrayList<T>(), ranges, asLeaf);
+        return new RTreeNode<T>(new ArrayList<T>(), ranges, asLeaf, null);
     }
 
     /**
@@ -59,88 +59,82 @@ public class RTree<T extends Comparable<T>> {
      * Searches the model.RTree for objects in query range
      * @return list of entries of objects in query range
      */
-    public List<T> search(double[] coords, double[] dimensions) {
-        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+    public List<T> search(Pair<Double, Double>[] ranges) {
+        if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         LinkedList<T> results = new LinkedList<T>();
-        search(coords, dimensions, root, results); // Actual Recursive function
+        search(ranges, root, results); // Actual Recursive function
         return results;
     }
 
-    private void search(double[] coords, double[] dimensions, RTreeNode n, LinkedList<T> results) {
-        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+    private void search(Pair<Double, Double>[] ranges, RTreeNode<T> n, LinkedList<T> results) {
+        if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        if (n.leaf) // If leaf, add the children
-            for (RTreeNode e: n.children) {
-                // Check if children is overlapping
-                if (!isOverlap(coords, dimensions, e.coords, e.dimensions)) continue;
-
-                // Add Entry to results
-                results.add(((Entry)e).entry);
-            }
+        if (n.isLeaf()) // If leaf, add the children
+            // Check if children is overlapping
+            // ** Here I assumed that the entry coordinates are all the same as the leaf node coordinates, so I just check once outside
+            // Add Entry to results
+            if (RTreeNode.isOverlap(ranges, n.getRanges()))
+                results.addAll(n.getItem());
 
         else // If not leaf, travel down the children
-            for (RTreeNode c : n.children) {
+            for (int i = 0; i < 2; ++i) { // 2 children
                 // Subtree does not contain the query range
-                if (!isOverlap(coords, dimensions, c.coords, c.dimensions)) continue;
+                if (!RTreeNode.isOverlap(ranges, n.neighbours[i].getRanges())) continue;
 
                 // If leaf domain is overlapping
-                search(coords, dimensions, c, results);
+                search(ranges, n.neighbours[i], results);
             }
     }
 
     /**
      * Deletes the entry associated with the given rectangle from the model.RTree
      *
-     * @param dimensions the dimensions of the rectangle
+     * @param ranges ranges of each axis to search in
      * @param entry the entry to delete
      * @return true if the entry was deleted from the model.RTree.
      */
-    public boolean delete(double[] coords, double[] dimensions, T entry) {
-        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+    public boolean delete(Pair<Double, Double>[] ranges, T entry) {
+        if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        RTreeNode l = findLeaf(root, coords, dimensions, entry);
-        if (!l.leaf) throw new IllegalStateException("Leaf not found");
+        RTreeNode<T> l = findLeaf(root, ranges, entry);
+        if (l == null || !l.isLeaf()) throw new IllegalStateException("Leaf not found");
 
-        ListIterator<RTreeNode> li = l.children.listIterator();
+
         T toRemove = null;
-        while (li.hasNext()) {
+        for (int i = 0; i < 2; ++i) {
             @SuppressWarnings("unchecked")
-            Entry e = (Entry)li.next();
-            if ( !e.entry.equals(entry) ) continue;
-            toRemove = e.entry;
+            T e = l.getItem().get(i);
+            if ( !e.equals(entry) ) continue;
+            toRemove = e;
             break;
         }
 
         // RTreeNode found, size decrease and condense the tree
         if ( toRemove != null ) {
-            condenseTree(l);
+            // condenseTree(l);
             size--;
         }
 
         return (toRemove != null);
     }
 
-    private RTreeNode findLeaf(RTreeNode n, double[] coords, double[] dimensions, T entry) {
-        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+    private RTreeNode<T> findLeaf(RTreeNode<T> n, Pair<Double, Double>[] ranges, T entry) {
+        if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        if (n.leaf)
-            for (RTreeNode c: n.children) {
-                if (!((Entry)c).entry.equals(entry)) continue;
+        if (n.isLeaf())
+            for (T e: n.getItem()) {
+                if (!e.equals(entry)) continue;
                 return n; // RTreeNode found
             }
 
         else
-            for ( RTreeNode c: n.children ) {
+            for ( int i = 0; i < 2; ++i ) {
                 // If child does not include entry range
-                if (!isOverlap(c.coords, c.dimensions, coords, dimensions)) continue;
+                if (!RTreeNode.isOverlap(n.neighbours[i].getRanges(), ranges)) continue;
 
                 // Recurse to find entry in children
-                RTreeNode result = findLeaf(c, coords, dimensions, entry);
+                RTreeNode<T> result = findLeaf(n.neighbours[i], ranges, entry);
                 if ( result != null ) return result;
             }
 
@@ -152,11 +146,13 @@ public class RTree<T extends Comparable<T>> {
      * Tree Compression with node as subtree root
      * @param n the subtree root
      */
+
+    /*
     private void condenseTree(RTreeNode n) {
         Set<RTreeNode> q = new HashSet<RTreeNode>();
 
         while ( n != root ) {
-            if ( n.leaf && (n.children.size() < minEntries)) {
+            if ( n.isLeaf() && (n.children.size() < minEntries)) {
                 q.addAll(n.children);
                 n.parent.children.remove(n);
             }
@@ -185,6 +181,7 @@ public class RTree<T extends Comparable<T>> {
             insert(e.coords, e.dimensions, e.entry);
         }
     }
+    */
 
     /**
      * Inserts the given entry into the model.RTree, associated with the given rectangle.
@@ -193,6 +190,8 @@ public class RTree<T extends Comparable<T>> {
      * @param dimensions the dimensions of the rectangle
      * @param entry the entry to insert
      */
+
+    /*
     public void insert(double[] coords, double[] dimensions, T entry) {
         if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
         if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
@@ -368,10 +367,13 @@ public class RTree<T extends Comparable<T>> {
         }
         return chooseLeaf(next, e);
     }
+     */
 
     /**
      * Returns the increase in area necessary for the given rectangle to cover the given entry.
      */
+
+    /*
     private double getRequiredExpansion( double[] coords, double[] dimensions, RTreeNode e ) {
         double area = getArea(dimensions);
         double[] deltas = new double[dimensions.length];
@@ -399,5 +401,39 @@ public class RTree<T extends Comparable<T>> {
 
 
     public void clear() { root = buildRoot(true); } // Garbage Collector will clear the rest
+
+    private class Node {
+        final double[] coords;
+        final double[] dimensions;
+        final LinkedList<model.Node> children;
+        final boolean leaf;
+
+        model.Node parent;
+
+        private Node(double[] coords, double[] dimensions, boolean leaf) {
+            this.coords = new double[coords.length];
+            this.dimensions = new double[dimensions.length];
+            System.arraycopy(coords, 0, this.coords, 0, coords.length);
+            System.arraycopy(dimensions, 0, this.dimensions, 0, dimensions.length);
+            this.leaf = leaf;
+            children = new LinkedList<model.Node>();
+        }
+
+        private class Entry extends Node
+        {
+            final T entry;
+
+            public Entry(double[] coords, double[] dimensions, T entry) {
+                // an entry isn't actually a leaf (its parent is a leaf)
+                // but all the algorithms should stop at the first leaf they encounter,
+                // so this little hack shouldn't be a problem.
+                super(coords, dimensions, true);
+                this.entry = entry;
+            }
+        }
+
+    }
+
+     */
 
 }
