@@ -1,5 +1,8 @@
 package p2pOverlay.services;
 
+import p2pOverlay.Peer;
+import p2pOverlay.util.Connection;
+
 public class PeerService {
 
     /*
@@ -9,4 +12,10 @@ public class PeerService {
     *
     * */
 
+    Peer head;
+
+    // TODO: Finish constructor, doing routing first
+    public PeerService(String id) { this.head = new Peer(id); }
+
+    // TODO: routing, join, leave
 }
