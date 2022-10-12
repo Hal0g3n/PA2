@@ -1,3 +1,5 @@
+package model;
+
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -10,7 +12,7 @@ import java.util.Set;
  *
  * Adapted from: https://searchcode.com/codesearch/raw/79146202/
  *
- * @param <T> the Entry to store in the RTree.
+ * @param <T> the Entry to store in the model.RTree.
  */
 public class RTree<T> {
     private String treeid;
@@ -52,7 +54,7 @@ public class RTree<T> {
     public RTree() {this(1, 0, 1);}
 
     /**
-     * Searches the RTree for objects in query range
+     * Searches the model.RTree for objects in query range
      * @return list of entries of objects in query range
      */
     public List<T> search(double[] coords, double[] dimensions) {
@@ -88,11 +90,11 @@ public class RTree<T> {
     }
 
     /**
-     * Deletes the entry associated with the given rectangle from the RTree
+     * Deletes the entry associated with the given rectangle from the model.RTree
      *
      * @param dimensions the dimensions of the rectangle
      * @param entry the entry to delete
-     * @return true if the entry was deleted from the RTree.
+     * @return true if the entry was deleted from the model.RTree.
      */
     public boolean delete(double[] coords, double[] dimensions, T entry) {
         if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
@@ -183,7 +185,7 @@ public class RTree<T> {
     }
 
     /**
-     * Inserts the given entry into the RTree, associated with the given rectangle.
+     * Inserts the given entry into the model.RTree, associated with the given rectangle.
      * @param coords the corner of the rectangle that is the lower bound in
      * every dimension
      * @param dimensions the dimensions of the rectangle
@@ -391,25 +393,6 @@ public class RTree<T> {
         for (double dimension : dimensions) area *= dimension;
 
         return area;
-    }
-
-    private boolean isOverlap( double[] scoords, double[] sdimensions, double[] coords, double[] dimensions ) {
-        for (int i = 0; i < scoords.length; i++) {
-            boolean overlapInThisDimension = false;
-
-            if (scoords[i] == coords[i]) overlapInThisDimension = true;
-
-            else if (scoords[i] < coords[i])
-                if (scoords[i] + sdimensions[i] >= coords[i]) overlapInThisDimension = true;
-
-            else if (scoords[i] > coords[i])
-                if ( coords[i] + dimensions[i] >= scoords[i] )
-                    overlapInThisDimension = true;
-
-            if (!overlapInThisDimension) return false;
-        }
-
-        return true;
     }
 
 
