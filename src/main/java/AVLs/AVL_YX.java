@@ -1,5 +1,7 @@
 package AVLs;
 
+import model.Node;
+
 import java.util.ArrayList;
 
 public class AVL_YX<T extends Comparable<? super T>> {

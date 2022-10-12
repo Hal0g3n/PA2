@@ -1,5 +1,7 @@
 package AVLs;
 
+import model.Node;
+
 import java.util.ArrayList;
 
 public class AVL_aloysus<T extends Comparable<? super T>> {
