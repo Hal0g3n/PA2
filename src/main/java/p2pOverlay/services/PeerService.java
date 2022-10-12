@@ -18,4 +18,19 @@ public class PeerService {
     public PeerService(String id) { this.head = new Peer(id); }
 
     // TODO: routing, join, leave
+
+    //this is just for testing
+    public static void main(String[] args){
+        try {
+            ConnectionService connectionService = new ConnectionService();
+            while(true){
+                String msg = connectionService.getMessage();
+                if(msg != null){
+                    System.out.printf("Message received in main, %s\n", msg);
+                }
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
