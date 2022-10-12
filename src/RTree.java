@@ -13,16 +13,20 @@ import java.util.Set;
  * @param <T> the Entry to store in the RTree.
  */
 public class RTree<T> {
+    private String id;
+
     private final int maxEntries;
     private final int minEntries;
     private final int numDims;
     private int size;
 
+    private RTree<T>[] skipptrs;
+
     private Node root;
 
 
     public RTree(int maxEntries, int minEntries, int numDims) {
-        assert( minEntries <= (maxEntries/2) );
+        if (minEntries * 2 > maxEntries) throw new IllegalArgumentException("minEntries太大");
         this.numDims = numDims;
         this.maxEntries = maxEntries;
         this.minEntries = minEntries;
@@ -91,7 +95,7 @@ public class RTree<T> {
      *
      * @param dimensions the dimensions of the rectangle
      * @param entry the entry to delete
-     * @return true iff the entry was deleted from the RTree.
+     * @return true if the entry was deleted from the RTree.
      */
     public boolean delete(double[] coords, double[] dimensions, T entry) {
         if (coords.length != numDims) throw new IllegalArgumentException("Incorrect Array Length");
@@ -409,38 +413,6 @@ public class RTree<T> {
         }
 
         return true;
-    }
-
-    private class Node {
-        final double[] coords;
-        final double[] dimensions;
-        final LinkedList<Node> children;
-        final boolean leaf;
-
-        Node parent;
-
-        private Node(double[] coords, double[] dimensions, boolean leaf) {
-            this.coords = new double[coords.length];
-            this.dimensions = new double[dimensions.length];
-            System.arraycopy(coords, 0, this.coords, 0, coords.length);
-            System.arraycopy(dimensions, 0, this.dimensions, 0, dimensions.length);
-            this.leaf = leaf;
-            children = new LinkedList<Node>();
-        }
-
-    }
-
-    private class Entry extends Node
-    {
-        final T entry;
-
-        public Entry(double[] coords, double[] dimensions, T entry) {
-            // an entry isn't actually a leaf (its parent is a leaf)
-            // but all the algorithms should stop at the first leaf they encounter,
-            // so this little hack shouldn't be a problem.
-            super(coords, dimensions, true);
-            this.entry = entry;
-        }
     }
 
 
