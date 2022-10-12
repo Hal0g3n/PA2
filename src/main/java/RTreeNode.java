@@ -1,5 +1,5 @@
 
-public class RTreeNode<T> extends AVLs.Node<T[]>{
+public class RTreeNode<T> extends model.Node<T[]>{
     // data members
     private String id;
 
