@@ -13,8 +13,8 @@ import java.util.Set;
  * @param <T> the Entry to store in the RTree.
  */
 public class RTree<T> {
-    private String id;
-
+    private String treeid;
+    private String skipId;
     private final int maxEntries;
     private final int minEntries;
     private final int numDims;
