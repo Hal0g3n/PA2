@@ -16,10 +16,10 @@ public class RTree<T> {
     private final int maxEntries;
     private final int minEntries;
     private final int numDims;
+    private int size;
 
     private Node root;
 
-    private volatile int size;
 
     public RTree(int maxEntries, int minEntries, int numDims) {
         assert( minEntries <= (maxEntries/2) );
@@ -37,8 +37,7 @@ public class RTree<T> {
     {
         double[] initCoords = new double[numDims];
         double[] initDimensions = new double[numDims];
-        for ( int i = 0; i < this.numDims; i++ )
-        {
+        for ( int i = 0; i < this.numDims; i++ ) {
             initCoords[i] = Math.sqrt(Double.MAX_VALUE);
             initDimensions[i] = -2.0f * Math.sqrt(Double.MAX_VALUE);
         }
@@ -412,8 +411,7 @@ public class RTree<T> {
         return true;
     }
 
-    private class Node
-    {
+    private class Node {
         final double[] coords;
         final double[] dimensions;
         final LinkedList<Node> children;
@@ -421,8 +419,7 @@ public class RTree<T> {
 
         Node parent;
 
-        private Node(double[] coords, double[] dimensions, boolean leaf)
-        {
+        private Node(double[] coords, double[] dimensions, boolean leaf) {
             this.coords = new double[coords.length];
             this.dimensions = new double[dimensions.length];
             System.arraycopy(coords, 0, this.coords, 0, coords.length);
@@ -437,8 +434,7 @@ public class RTree<T> {
     {
         final T entry;
 
-        public Entry(double[] coords, double[] dimensions, T entry)
-        {
+        public Entry(double[] coords, double[] dimensions, T entry) {
             // an entry isn't actually a leaf (its parent is a leaf)
             // but all the algorithms should stop at the first leaf they encounter,
             // so this little hack shouldn't be a problem.
@@ -448,9 +444,5 @@ public class RTree<T> {
     }
 
 
-    public void clear()
-    {
-        root = buildRoot(true);
-        // let the GC take care of the rest.
-    }
+    public void clear() { root = buildRoot(true); } // Garbage Collector will clear the rest
 }
