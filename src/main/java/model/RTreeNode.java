@@ -1,6 +1,9 @@
 package model;
 
-public class RTreeNode<T> extends model.Node<T[]>{
+import java.util.ArrayList;
+import java.util.List;
+
+public class RTreeNode<T> extends model.Node<List<T>>{
     // data members
     private String id;
 
@@ -10,17 +13,17 @@ public class RTreeNode<T> extends model.Node<T[]>{
     public boolean isLeaf() {return leaf;}
 
     // Ctors
-    public RTreeNode(T[] item, Pair<Double, Double>[] ranges) {
+    public RTreeNode(List<T> item, Pair<Double, Double>[] ranges) {
         this(item, ranges, false);
     }
 
-    public RTreeNode(T[] item, Pair<Double, Double>[] ranges, RTreeNode<T>[] neighbours) {
+    public RTreeNode(List<T> item, Pair<Double, Double>[] ranges, RTreeNode<T>[] neighbours) {
         this(item, ranges, false);
         this.neighbours[0] = neighbours[0];
         this.neighbours[1] = neighbours[1];
     }
 
-    public RTreeNode(T[] item, Pair<Double, Double>[] ranges, boolean leaf) {
+    public RTreeNode(List<T> item, Pair<Double, Double>[] ranges, boolean leaf) {
         super(item);
         neighbours = new RTreeNode[2];
         this.leaf = leaf;
@@ -39,4 +42,15 @@ public class RTreeNode<T> extends model.Node<T[]>{
     }
 }
 
+class Entry extends Node {
+    final T entry;
+
+    public Entry(double[] coords, double[] dimensions, T entry) {
+        // an entry isn't actually a leaf (its parent is a leaf)
+        // but all the algorithms should stop at the first leaf they encounter,
+        // so this little hack shouldn't be a problem.
+        super(coords, dimensions, true);
+        this.entry = entry;
+    }
+}
 
