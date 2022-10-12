@@ -417,4 +417,36 @@ public class RTree<T> {
 
 
     public void clear() { root = buildRoot(true); } // Garbage Collector will clear the rest
+
+    private class Node {
+        final double[] coords;
+        final double[] dimensions;
+        final LinkedList<Node> children;
+        final boolean leaf;
+
+        Node parent;
+
+        private Node(double[] coords, double[] dimensions, boolean leaf) {
+            this.coords = new double[coords.length];
+            this.dimensions = new double[dimensions.length];
+            System.arraycopy(coords, 0, this.coords, 0, coords.length);
+            System.arraycopy(dimensions, 0, this.dimensions, 0, dimensions.length);
+            this.leaf = leaf;
+            children = new LinkedList<Node>();
+        }
+
+    }
+
+    private class Entry extends Node
+    {
+        final T entry;
+
+        public Entry(double[] coords, double[] dimensions, T entry) {
+            // an entry isn't actually a leaf (its parent is a leaf)
+            // but all the algorithms should stop at the first leaf they encounter,
+            // so this little hack shouldn't be a problem.
+            super(coords, dimensions, true);
+            this.entry = entry;
+        }
+    }
 }
