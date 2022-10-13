@@ -3,6 +3,8 @@ package model;
 import AVLs.ElementNotFoundException;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -11,6 +13,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     private long id;
     public Range<Double>[] ranges;
 
+    private long numEntries;
     private long numChildren;
     private boolean leaf;
     public boolean isLeaf() {return leaf;}
@@ -41,8 +44,9 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     public long getId() { return this.id;}
 
-    public void addEntry(T entry) {
-        this.item.add(entry);
+    public void addEntries(T... entries) {
+        this.item.addAll(Arrays.asList(entries));
+        ++numEntries;
     }
 
     static public boolean isOverlap(Range<Double>[] r1, Range<Double>[] r2 ) {
@@ -92,6 +96,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
      * Recomputes the dependent values
      */
     void tighten() {
+        // Copies the old ranges
         Range<Double>[] n_ranges = Arrays.copyOf(ranges, ranges.length);
 
         if (this.isLeaf()) {
@@ -128,7 +133,13 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
             }
         }
 
+        // Updates the ranges, making it a tighter domain
         this.ranges = n_ranges;
+
+        // Recompute the number of entries in subtree
+        numEntries = item.size();
+        for (int i = 0; i < 2; ++i) if (neighbours[i] != null)
+            numEntries += ((RTreeNode<T>) neighbours[i]).numEntries;
     }
 
     /**
@@ -155,6 +166,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
                 expanded *= this.ranges[i].getMax() - e_vals[i];
         }
 
+        // Calculate Difference and return that
         return expanded - area;
     }
 }
