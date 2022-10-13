@@ -6,8 +6,11 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     // data members
     private long id;
     private Pair<Double, Double>[] ranges;
+
+    private long subtreeEntries;
     private boolean leaf;
     public boolean isLeaf() {return leaf;}
+    public void setLeaf(boolean l) {leaf = l;}
 
     // Ctors
     public RTreeNode(List<T> item, Pair<Double, Double>[] ranges) {
@@ -31,8 +34,15 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         return ranges;
     }
 
+    public long getId() { return this.id;}
+
     public void addEntry(T entry) {
         this.item.add(entry);
+        RTreeNode<T> currNode = this;
+        while (currNode != null) {
+            ++currNode.subtreeEntries;
+            currNode = (RTreeNode<T>) currNode.neighbours[2];
+        }
     }
 
     static public boolean isOverlap( Pair<Double, Double>[] r1, Pair<Double, Double>[] r2 ) {
@@ -77,11 +87,11 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         for ( int i = 0; i < e_vals.length; i++ ) {
             // Expand end point
             if (this.ranges[i].getSecond() < e_vals[i])
-                area *= e_vals[i] - this.getRanges()[i].getFirst();
+                expanded *= e_vals[i] - this.getRanges()[i].getFirst();
 
             // Expand start point
             if (this.ranges[i].getFirst() > e_vals[i])
-                area *= this.ranges[i].getSecond() - e_vals[i];
+                expanded *= this.ranges[i].getSecond() - e_vals[i];
         }
 
         return expanded - area;

@@ -144,61 +144,56 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
      * Tree Compression with node as subtree root
      * @param n the subtree root
      */
-    /*
+
     private void condenseTree(RTreeNode<T> n) {
-        Set<RTreeNode> q = new HashSet<>();
+        Set<RTreeNode<T>> to_die = new HashSet<>();
 
         while ( n != root ) {
-            if ( n.isLeaf() && (n.neighbours.length < minEntries)) {
-                q.addAll(List.of((RTreeNode<T>[]) n.neighbours));
-                n.neighbours[3].neighbours.remove(n);
+            if ( n.isLeaf() && (n.getItem().size() < minEntries)) {
+                to_die.add(n);
+                n.neighbours[2].neighbours[(int) (n.getId() % 2)] = null;
+                if (n.neighbours[(int) ((n.getId() + 1) % 2)] == null) // no children: you are leaf
+                    ((RTreeNode<T>) n.neighbours[2]).setLeaf(true);
             }
             else if (!n.isLeaf() && (n.neighbours.length < minEntries)) {
                 // probably a more efficient way to do this...
-                LinkedList<RTreeNode> toVisit = new LinkedList<>(List.of((RTreeNode<T>[]) n.neighbours));
+                Queue<RTreeNode<T>> toVisit = new LinkedList<>(List.of((RTreeNode<T>[]) n.neighbours));
                 while (!toVisit.isEmpty()) {
-                    RTreeNode<T> c = toVisit.pop();
+                    RTreeNode<T> c = toVisit.remove();
                     if ( c.isLeaf() ) q.addAll(List.of((RTreeNode<T>[]) c.neighbours));
                     else toVisit.addAll(List.of((RTreeNode<T>[]) c.neighbours));
                 }
-                n.neighbours[3].neighbours.remove(n);
+                n.neighbours[2].neighbours.remove(n);
             }
             else tighten(n);
 
-            n = (RTreeNode<T>) n.neighbours[3];
+            n = (RTreeNode<T>) n.neighbours[2];
         }
 
-        for (RTreeNode ne: q) {
+        for (RTreeNode<T> ne: to_die) {
             @SuppressWarnings("unchecked")
             Entry e = (Entry)ne;
             insert(e.coords, e.dimensions, e.entry);
         }
     }
-     */
+
 
     /**
-     * Inserts the given entry into the model.RTree, associated with the given rectangle.
-     * @param coords the corner of the rectangle that is the lower bound in
-     * every dimension
-     * @param dimensions the dimensions of the rectangle
-     * @param entry the entry to insert
+     * Inserting an entry into the R-Tree
      */
-    /*
-    public void insert(double[] coords, double[] dimensions, T entry) {
-        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+    public void insert(T entry) {
+        if (entry.getParamValues().length != numDims) throw new IllegalArgumentException("输入的大小不对");
 
-        RTreeNode<T> l = chooseLeaf(root, entry);
-        l.addEntry(entry);
+        RTreeNode<T> leaf = chooseLeaf(root, entry);
+        leaf.addEntry(entry);
 
-        if ( l.neighbours.length > maxEntries ) {
-            RTreeNode[] splits = splitRTreeNode(l);
+        // It is time to die leaf, you are too fat
+        if ( leaf.neighbours.length > maxEntries ) {
+            RTreeNode<T>[] splits = splitRreeNode(l);
             adjustTree(splits[0], splits[1]);
         }
-
-        else {
-            adjustTree(l, null);
-        }
+        //
+        else adjustTree(leaf, null);
     }
 
     private void adjustTree(RTreeNode<T> n, RTreeNode<T> nn) {
@@ -226,7 +221,6 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
             adjustTree((RTreeNode<T>) n.neighbours[3], null);
         }
     }
-     */
 
     /**
      * TODO: This needs work (they don't maintain binary structure)
@@ -328,15 +322,18 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         return bestPair;
     }
 
-    /*
     private void tighten(RTreeNode<T> n) {
         double[] minCoords = new double[n.getRanges().length];
         double[] maxDimensions = new double[n.getRanges().length];
+
+        if (n.isLeaf()) {
+
+        }
         for (int i = 0; i < minCoords.length; i++ ) {
             minCoords[i] = Double.MAX_VALUE;
             maxDimensions[i] = 0.0f;
 
-            for (RTreeNode<T> c: (RTreeNode<T>[])n.neighbours) {
+            for (RTreeNode<T> c: (RTreeNode<T>[]) n.neighbours) {
                 // we may have bulk-added a bunch of children to a node (eg. in splitRTreeNode)
                 // so here we just enforce the child->parent relationship.
                 c.neighbours[3] = n;
@@ -347,7 +344,6 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         System.arraycopy(minCoords, 0, n.coords, 0, minCoords.length);
         System.arraycopy(maxDimensions, 0, n.dimensions, 0, maxDimensions.length);
     }
-    */
 
     private RTreeNode<T> chooseLeaf(RTreeNode<T> n, T e) {
         if ( n.isLeaf() ) {
