@@ -32,12 +32,15 @@ public class TempMain {
 
         System.out.print("Available commands:\n" +
                 "1. Get peerID (register)\n" +
-                "2. Send to peer (send peerID msg)\n");
+                "2. Echo peer (echo peerID msg)\n");
 
         try{
         while((line = userInput.readLine()) != null){
-            if(line.equals("register")){
-                ps.register();
+            String[] tokens = line.split(" ");
+            System.out.println("Command recognised as: " + tokens[0]);
+            switch(tokens[0]){
+                case "register" -> ps.register();
+                case "echo" -> ps.sendMsg(Integer.parseInt(tokens[1]), tokens[2]);
             }
         }
         } catch (IOException e) {

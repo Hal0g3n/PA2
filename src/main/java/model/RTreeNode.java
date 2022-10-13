@@ -1,5 +1,7 @@
 package model;
 
+import AVLs.ElementNotFoundException;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -9,14 +11,14 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     private long id;
     public Range<Double>[] ranges;
 
-    private long subtreeEntries;
+    private long numChildren;
     private boolean leaf;
     public boolean isLeaf() {return leaf;}
     public void setLeaf(boolean l) {leaf = l;}
 
     // Ctors
     public RTreeNode(List<T> item, Range<Double>[] ranges) {
-        this(item, ranges, false, null);
+        this(item, ranges, true, null);
     }
 
     public RTreeNode(List<T> item, Range<Double>[] ranges, RTreeNode<T>[] neighbours) {
@@ -27,7 +29,8 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     public RTreeNode(List<T> item, Range<Double>[] ranges, boolean leaf, RTreeNode<T> parent) {
         super(item);
-        neighbours = new RTreeNode[2];
+        neighbours = new RTreeNode[4];
+        neighbours[3] = parent;
         this.leaf = leaf;
         this.ranges = ranges;
     }
@@ -38,9 +41,8 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     public long getId() { return this.id;}
 
-    public void addEntries(T... entries) {
-        this.item.addAll(Arrays.asList(entries));
-        ++subtreeEntries;
+    public void addEntry(T entry) {
+        this.item.add(entry);
     }
 
     static public boolean isOverlap(Range<Double>[] r1, Range<Double>[] r2 ) {
@@ -60,12 +62,30 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         return area;
     }
 
-    void addChild(RTreeNode node) {
+    public long getNumChildren() {
+        return numChildren;
+    }
 
+    void addChild(RTreeNode<T> node) {
+        for (int i = 0; i < 3; ++i) {
+            if (neighbours[i] == null) {
+                neighbours[i] = node;
+                ++numChildren;
+                return;
+            }
+        }
+        throw new IllegalStateException("Too many children");
     }
 
     void removeChild(RTreeNode node) {
-
+        for (int i = 0; i < 3; ++i) {
+            if (neighbours[i].equals(node)) {
+                neighbours[i] = null;
+                --numChildren;
+                return;
+            }
+        }
+        throw new ElementNotFoundException("No such child");
     }
 
     /**

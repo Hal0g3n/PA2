@@ -153,21 +153,21 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         while ( n != root ) {
             if ( n.isLeaf() && (n.getItem().size() < minEntries)) {
                 orphans.addAll(n.getItem());
-                n.neighbours[2].neighbours[(int) (n.getId() % 2)] = null;
+                n.neighbours[3].neighbours[(int) (n.getId() % 2)] = null;
             }
-            else if (!n.isLeaf() && (n.neighbours.length < 1)) {
-                n.neighbours[2].neighbours[(int) (n.getId() % 2)] = null;
+            else if (!n.isLeaf() && (n.getNumChildren() < 1)) {
+                n.neighbours[3].neighbours[(int) (n.getId() % 2)] = null;
             }
             else n.tighten();
 
-            n = (RTreeNode<T>) n.neighbours[2];
+            n = (RTreeNode<T>) n.neighbours[3];
         }
 
         // now n is the root
         if (n.neighbours[0] == null || n.neighbours[1] == null) {
             // roots with one child are not allowed
             RTreeNode<T> child = (RTreeNode<T>) (n.neighbours[0] == null ? n.neighbours[1] : n.neighbours[0]);
-            child.neighbours[2] = null;
+            child.neighbours[3] = null;
             root = child;
         }
 
@@ -202,9 +202,9 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
                 // build new root and add children.
                 root = buildRoot(false);
                 root.addChild(n);
-                n.neighbours[2] = root;
+                n.neighbours[3] = root;
                 root.addChild(nn);
-                nn.neighbours[2] = root;
+                nn.neighbours[3] = root;
             }
             root.tighten();
             return;
@@ -212,13 +212,13 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         n.tighten();
         if ( nn != null ) {
             nn.tighten();
-            if ( n.neighbours[2].neighbours.length > maxEntries ) {
+            if ( n.neighbours[3].neighbours.length > maxEntries ) {
                 RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[2]);
                 adjustTree(splits[0], splits[1]);
             }
         }
-        else if ( n.neighbours[2] != null ) {
-            adjustTree((RTreeNode<T>) n.neighbours[2], null);
+        else if ( n.neighbours[3] != null ) {
+            adjustTree((RTreeNode<T>) n.neighbours[3], null);
         }
     }
 
@@ -237,7 +237,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<>(), n.getRanges(), n.isLeaf(), (RTreeNode<T>) n.neighbours[2])};
 
         // Add children to parent
-        if ( n_nodes[1].neighbours[2] != null ) ((RTreeNode<T>) n_nodes[1].neighbours[2]).addChild(n_nodes[1]);
+        if ( n_nodes[1].neighbours[3] != null ) ((RTreeNode<T>) n_nodes[1].neighbours[3]).addChild(n_nodes[1]);
 
         // List of entries and clear n for reuse
         LinkedList<T> cc = new LinkedList<>(n.getItem());
