@@ -10,7 +10,7 @@ public class Peer {
     private final ArrayList<Connection> clockwise;
     private final ArrayList<Connection> antiClockwise;
     public String id;
-    public static ArrayList<Connection>[] routeTable;
+    public ArrayList<Connection>[] routeTable;
 
     public Peer(String id, ArrayList<Connection> clockwise, ArrayList<Connection> antiClockwise) {
         this.id = id;
@@ -27,4 +27,5 @@ public class Peer {
         clockwise.set(h, clockwiseNeighbour);
         antiClockwise.set(h, antiClockwiseNeighbour);
     }
+
 }
