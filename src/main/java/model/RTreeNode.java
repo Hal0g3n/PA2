@@ -1,11 +1,13 @@
 package model;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     // data members
     private long id;
-    private Pair<Double, Double>[] ranges;
+    public Range<Double>[] ranges;
 
     private long subtreeEntries;
     private boolean leaf;
@@ -13,24 +15,24 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     public void setLeaf(boolean l) {leaf = l;}
 
     // Ctors
-    public RTreeNode(List<T> item, Pair<Double, Double>[] ranges) {
+    public RTreeNode(List<T> item, Range<Double>[] ranges) {
         this(item, ranges, false, null);
     }
 
-    public RTreeNode(List<T> item, Pair<Double, Double>[] ranges, RTreeNode<T>[] neighbours) {
+    public RTreeNode(List<T> item, Range<Double>[] ranges, RTreeNode<T>[] neighbours) {
         this(item, ranges, false, neighbours[2]);
         this.neighbours[0] = neighbours[0];
         this.neighbours[1] = neighbours[1];
     }
 
-    public RTreeNode(List<T> item, Pair<Double, Double>[] ranges, boolean leaf, RTreeNode<T> parent) {
+    public RTreeNode(List<T> item, Range<Double>[] ranges, boolean leaf, RTreeNode<T> parent) {
         super(item);
         neighbours = new RTreeNode[2];
         this.leaf = leaf;
         this.ranges = ranges;
     }
 
-    public Pair<Double, Double>[] getRanges() {
+    public Range<Double>[] getRanges() {
         return ranges;
     }
 
@@ -45,11 +47,11 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         }
     }
 
-    static public boolean isOverlap( Pair<Double, Double>[] r1, Pair<Double, Double>[] r2 ) {
+    static public boolean isOverlap(Range<Double>[] r1, Range<Double>[] r2 ) {
         if (r1.length != r2.length) throw new IllegalArgumentException("输入的顶点的范围数不一样");
 
         for (int i = 0; i < r1.length; i++) {
-            if (r1[i].getFirst() > r2[i].getSecond() || r2[i].getFirst() > r1[i].getSecond())
+            if (r1[i].getMin() > r2[i].getMax() || r2[i].getMin() > r1[i].getMax())
                 return false;
         }
 
@@ -58,7 +60,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     static public double getArea(RTreeNode node) {
         double area = 1.0f;
-        for (Pair<Double, Double> range : node.ranges) area *= (range.getSecond() - range.getFirst());
+        for (Range<Double> range : node.ranges) area *= (range.getMax() - range.getMin());
         return area;
     }
 
@@ -68,6 +70,49 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     void removeChild(RTreeNode node) {
 
+    }
+
+    /**
+     * Recomputes the dependent values
+     */
+    void tighten() {
+        Range<Double>[] n_ranges = Arrays.copyOf(ranges, ranges.length);
+
+        if (this.isLeaf()) {
+            // Get all parameter values of entries stored
+            List<double[]> elements = item.stream().map(RTreeEntry::getParamValues).collect(Collectors.toList());
+
+            for (int i = 0; i < ranges.length; i++) { // For each dimension
+                n_ranges[i].setMin(Double.MAX_VALUE);
+                n_ranges[i].setMax(Double.MIN_VALUE);
+
+                for (double[] params : elements) { // For each parameter
+                    // Replace smallest with the smallest possible
+                    n_ranges[i].setMin(Math.min(n_ranges[i].getMin(), params[i]));
+
+                    // Replace largest with the largest possible
+                    n_ranges[i].setMax(Math.max(n_ranges[i].getMax(), params[i]));
+                }
+            }
+        }
+
+        else {
+            for (int i = 0; i < ranges.length; i++) { // For each dimension
+                // Get the min of the 2 children
+                n_ranges[i].setMin(Math.max(
+                        ((RTreeNode<T>) neighbours[0]).ranges[i].getMax(),
+                        ((RTreeNode<T>) neighbours[1]).ranges[i].getMax()
+                ));
+
+                // Get the max of the 2 children
+                n_ranges[i].setMin(Math.min(
+                    ((RTreeNode<T>) neighbours[0]).ranges[i].getMin(),
+                    ((RTreeNode<T>) neighbours[1]).ranges[i].getMin()
+                ));
+            }
+        }
+
+        this.ranges = n_ranges;
     }
 
     /**
@@ -86,12 +131,12 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
         for ( int i = 0; i < e_vals.length; i++ ) {
             // Expand end point
-            if (this.ranges[i].getSecond() < e_vals[i])
-                expanded *= e_vals[i] - this.getRanges()[i].getFirst();
+            if (this.ranges[i].getMax() < e_vals[i])
+                expanded *= e_vals[i] - this.getRanges()[i].getMin();
 
             // Expand start point
-            if (this.ranges[i].getFirst() > e_vals[i])
-                expanded *= this.ranges[i].getSecond() - e_vals[i];
+            if (this.ranges[i].getMin() > e_vals[i])
+                expanded *= this.ranges[i].getMax() - e_vals[i];
         }
 
         return expanded - area;

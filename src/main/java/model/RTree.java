@@ -1,7 +1,6 @@
 package model;
 
 import java.util.*;
-import static model.RTreeNode.*;
 
 /**
  * Based on R-Trees: A Dynamic Index Structure for Spatial Searching
@@ -35,12 +34,12 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
      * @return the root node
      */
     private RTreeNode<T> buildRoot(boolean asLeaf) {
-        Pair<Double, Double>[] ranges = new Pair[numDims];
+        Range<Double>[] ranges = new Range[numDims];
 
         // Setting Largest Domain in each dimension
         // sqrt(MAX_VALUE)
         for ( int i = 0; i < this.numDims; i++ )
-            ranges[i] = new Pair<Double, Double> (
+            ranges[i] = new Range<Double> (
                 Math.sqrt(Double.MAX_VALUE),
                 -2.0f * Math.sqrt(Double.MAX_VALUE)
             );
@@ -58,7 +57,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
      * Searches the model.RTree for objects in query range
      * @return list of entries of objects in query range
      */
-    public List<T> search(Pair<Double, Double>[] ranges) {
+    public List<T> search(Range<Double>[] ranges) {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         LinkedList<T> results = new LinkedList<T>();
@@ -66,7 +65,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         return results;
     }
 
-    private void search(Pair<Double, Double>[] ranges, RTreeNode<T> n, LinkedList<T> results) {
+    private void search(Range<Double>[] ranges, RTreeNode<T> n, LinkedList<T> results) {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         if (n.isLeaf()) // If leaf, add the children
@@ -92,7 +91,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
      * @param entry the entry to delete
      * @return true if the entry was deleted from the model.RTree.
      */
-    public boolean delete(Pair<Double, Double>[] ranges, T entry) {
+    public boolean delete(Range<Double>[] ranges, T entry) {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         RTreeNode<T> l = findLeaf(root, ranges, entry);
@@ -117,7 +116,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         return (toRemove != null);
     }
 
-    private RTreeNode<T> findLeaf(RTreeNode<T> n, Pair<Double, Double>[] ranges, T entry) {
+    private RTreeNode<T> findLeaf(RTreeNode<T> n, Range<Double>[] ranges, T entry) {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         if (n.isLeaf())
@@ -189,10 +188,10 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
 
         // It is time to die leaf, you are too fat
         if ( leaf.neighbours.length > maxEntries ) {
-            RTreeNode<T>[] splits = splitRreeNode(l);
+            RTreeNode<T>[] splits = splitRreeNode(leaf);
             adjustTree(splits[0], splits[1]);
         }
-        //
+        // No splitting, just adjust the tree
         else adjustTree(leaf, null);
     }
 
@@ -206,19 +205,19 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
                 root.addChild(nn);
                 nn.neighbours[2] = root;
             }
-            tighten(root);
+            root.tighten();
             return;
         }
-        tighten(n);
+        n.tighten();
         if ( nn != null ) {
-            tighten(nn);
-            if ( n.neighbours[3].neighbours.length > maxEntries ) {
-                RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[3]);
+            nn.tighten();
+            if ( n.neighbours[2].neighbours.length > maxEntries ) {
+                RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[2]);
                 adjustTree(splits[0], splits[1]);
             }
         }
-        else if ( n.neighbours[3] != null ) {
-            adjustTree((RTreeNode<T>) n.neighbours[3], null);
+        else if ( n.neighbours[2] != null ) {
+            adjustTree((RTreeNode<T>) n.neighbours[2], null);
         }
     }
 
@@ -231,7 +230,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
     /*
     private RTreeNode<T>[] splitRTreeNode(RTreeNode<T> n) {
         RTreeNode<T>[] nn = new RTreeNode<T>[] {n, new RTreeNode<T>(n.getRanges(), n.isLeaf())};
-        nn[1].neighbours[3] = n.neighbours[3];
+        nn[1].neighbours[3] = n.neighbours[2];
         if ( nn[1].neighbours[3] != null ) {
             ((RTreeNode<T>) nn[1].neighbours[3]).addChild(nn[1]);
         }
@@ -279,8 +278,8 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
             preferred.addChild(c);
         }
 
-        tighten(nn[0]);
-        tighten(nn[1]);
+        nn[0].tighten();
+        nn[1].tighten();
         return nn;
     }
      */
@@ -298,14 +297,14 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
             double dimUb = -1.0f * Double.MAX_VALUE, dimMaxLb = -1.0f * Double.MAX_VALUE;
             RTreeNode<T> nMaxLb = null, nMinUb = null;
             for ( RTreeNode<T> n: nn) {
-                if ( n.getRanges()[i].getFirst() < dimLb ) dimLb = n.getRanges()[i].getFirst();
-                if ( n.getRanges()[i].getSecond() > dimUb ) dimUb = n.getRanges()[i].getSecond();
-                if ( n.getRanges()[i].getFirst() > dimMaxLb ) {
-                    dimMaxLb = n.getRanges()[i].getFirst();
+                if ( n.getRanges()[i].getMin() < dimLb ) dimLb = n.getRanges()[i].getMin();
+                if ( n.getRanges()[i].getMax() > dimUb ) dimUb = n.getRanges()[i].getMax();
+                if ( n.getRanges()[i].getMin() > dimMaxLb ) {
+                    dimMaxLb = n.getRanges()[i].getMin();
                     nMaxLb = n;
                 }
-                if ( n.getRanges()[i].getSecond() < dimMinUb ) {
-                    dimMinUb = n.getRanges()[i].getSecond();
+                if ( n.getRanges()[i].getMax() < dimMinUb ) {
+                    dimMinUb = n.getRanges()[i].getMax();
                     nMinUb = n;
                 }
             }
@@ -320,29 +319,6 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         nn.remove(bestPair[0]);
         nn.remove(bestPair[1]);
         return bestPair;
-    }
-
-    private void tighten(RTreeNode<T> n) {
-        double[] minCoords = new double[n.getRanges().length];
-        double[] maxDimensions = new double[n.getRanges().length];
-
-        if (n.isLeaf()) {
-
-        }
-        for (int i = 0; i < minCoords.length; i++ ) {
-            minCoords[i] = Double.MAX_VALUE;
-            maxDimensions[i] = 0.0f;
-
-            for (RTreeNode<T> c: (RTreeNode<T>[]) n.neighbours) {
-                // we may have bulk-added a bunch of children to a node (eg. in splitRTreeNode)
-                // so here we just enforce the child->parent relationship.
-                c.neighbours[3] = n;
-                if (c.getRanges()[i].getFirst() < minCoords[i]) minCoords[i] = c.getRanges()[i].getFirst();
-                if (c.getRanges()[i].getSecond() > maxDimensions[i]) maxDimensions[i] = c.getRanges()[i].getSecond();
-            }
-        }
-        System.arraycopy(minCoords, 0, n.coords, 0, minCoords.length);
-        System.arraycopy(maxDimensions, 0, n.dimensions, 0, maxDimensions.length);
     }
 
     private RTreeNode<T> chooseLeaf(RTreeNode<T> n, T e) {
@@ -362,8 +338,8 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
                 double thisArea = 1.0f;
                 for ( int i = 0; i < c.getRanges().length; i++ ) {
                     assert next != null;
-                    curArea *= next.getRanges()[i].getSecond() - next.getRanges()[i].getFirst();
-                    thisArea *= c.getRanges()[i].getSecond() - c.getRanges()[i].getFirst();
+                    curArea *= next.getRanges()[i].getMax() - next.getRanges()[i].getMin();
+                    thisArea *= c.getRanges()[i].getMax() - c.getRanges()[i].getMin();
                 }
                 if ( thisArea < curArea ) next = c;
             }
