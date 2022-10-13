@@ -1,8 +1,7 @@
 package model;
 
 import java.util.*;
-
-import model.RTreeNode;
+import static model.RTreeNode.*;
 
 /**
  * Based on R-Trees: A Dynamic Index Structure for Spatial Searching
@@ -12,7 +11,7 @@ import model.RTreeNode;
  *
  * @param <T> the Entry to store in the model.RTree.
  */
-public class RTree<T extends Comparable<T>> {
+public class RTree<T extends Comparable<T> & RTreeEntry> {
     private String id;
 
     private final int maxEntries;
@@ -68,27 +67,23 @@ public class RTree<T extends Comparable<T>> {
         return results;
     }
 
-    private void search(double[] coords, double[] dimensions, RTreeNode n, LinkedList<T> results) {
+    private void search(double[] coords, double[] dimensions, RTreeNode<T> n, LinkedList<T> results) {
         if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
         if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        if (n.leaf) // If leaf, add the children
-            for (RTreeNode e: n.children) {
-                // Check if children is overlapping
-                if (!isOverlap(coords, dimensions, e.coords, e.dimensions)) continue;
+        if (n.isLeaf()) { // If leaf, add the children
+            for (T e : n.getItem())
+                if (isOverlap(coord, dimensions, e)) results.add(e);
+        }
+        else {// If not leaf, travel down the children
+            // Left Child
+            if (isOverlap(coords, dimensions, ((RTreeNode<T>) n.neighbours[0]).getRanges()))
+                search(coords, dimensions, (RTreeNode<T>) n.neighbours[0], results);
 
-                // Add Entry to results
-                results.add(((Entry)e).entry);
-            }
-
-        else // If not leaf, travel down the children
-            for (RTreeNode c : n.children) {
-                // Subtree does not contain the query range
-                if (!isOverlap(coords, dimensions, c.coords, c.dimensions)) continue;
-
-                // If leaf domain is overlapping
-                search(coords, dimensions, c, results);
-            }
+            // Right Child
+            if (isOverlap(coords, dimensions, ((RTreeNode<T>) n.neighbours[1]).getRanges()))
+                search(coords, dimensions, (RTreeNode<T>) n.neighbours[1], results);
+        }
     }
 
     /**
@@ -102,16 +97,16 @@ public class RTree<T extends Comparable<T>> {
         if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
         if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        RTreeNode l = findLeaf(root, coords, dimensions, entry);
-        if (!l.leaf) throw new IllegalStateException("Leaf not found");
+        RTreeNode<T> l = findLeaf(root, coords, dimensions, entry);
+        if (l == null) throw new IllegalStateException("找不到树叶");
+        if (!l.isLeaf()) throw new IllegalStateException("找到的不是树叶");
 
-        ListIterator<RTreeNode> li = l.children.listIterator();
+        ListIterator<T> li = l.getItem().listIterator();
         T toRemove = null;
         while (li.hasNext()) {
-            @SuppressWarnings("unchecked")
-            Entry e = (Entry)li.next();
-            if ( !e.entry.equals(entry) ) continue;
-            toRemove = e.entry;
+            T e = li.next();
+            if ( !e.equals(entry) ) continue;
+            toRemove = e;
             break;
         }
 
@@ -124,23 +119,23 @@ public class RTree<T extends Comparable<T>> {
         return (toRemove != null);
     }
 
-    private RTreeNode findLeaf(RTreeNode n, double[] coords, double[] dimensions, T entry) {
+    private RTreeNode<T> findLeaf(RTreeNode<T> n, double[] coords, double[] dimensions, T entry) {
         if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
         if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        if (n.leaf)
-            for (RTreeNode c: n.children) {
+        if (n.isLeaf())
+            for (Node<List<T>> c: n.neighbours) {
                 if (!((Entry)c).entry.equals(entry)) continue;
                 return n; // RTreeNode found
             }
 
         else
-            for ( RTreeNode c: n.children ) {
+            for ( Node<List<T>> c: n.neighbours ) {
                 // If child does not include entry range
                 if (!isOverlap(c.coords, c.dimensions, coords, dimensions)) continue;
 
                 // Recurse to find entry in children
-                RTreeNode result = findLeaf(c, coords, dimensions, entry);
+                RTreeNode<T> result = findLeaf(c, coords, dimensions, entry);
                 if ( result != null ) return result;
             }
 
@@ -152,31 +147,27 @@ public class RTree<T extends Comparable<T>> {
      * Tree Compression with node as subtree root
      * @param n the subtree root
      */
-    private void condenseTree(RTreeNode n) {
-        Set<RTreeNode> q = new HashSet<RTreeNode>();
+    private void condenseTree(RTreeNode<T> n) {
+        Set<RTreeNode> q = new HashSet<>();
 
         while ( n != root ) {
-            if ( n.leaf && (n.children.size() < minEntries)) {
-                q.addAll(n.children);
-                n.parent.children.remove(n);
+            if ( n.isLeaf() && (n.neighbours.length < minEntries)) {
+                q.addAll(List.of((RTreeNode<T>[]) n.neighbours));
+                n.neighbours[3].neighbours.remove(n);
             }
-            else if (!n.leaf && (n.children.size() < minEntries)) {
+            else if (!n.isLeaf() && (n.neighbours.length < minEntries)) {
                 // probably a more efficient way to do this...
-                LinkedList<RTreeNode> toVisit = new LinkedList<RTreeNode>(n.children);
+                LinkedList<RTreeNode> toVisit = new LinkedList<>(List.of((RTreeNode<T>[]) n.neighbours));
                 while (!toVisit.isEmpty()) {
-                    RTreeNode c = toVisit.pop();
-                    if ( c.leaf ) {
-                        q.addAll(c.children);
-                    }
-                    else {
-                        toVisit.addAll(c.children);
-                    }
+                    RTreeNode<T> c = toVisit.pop();
+                    if ( c.isLeaf() ) q.addAll(List.of((RTreeNode<T>[]) c.neighbours));
+                    else toVisit.addAll(List.of((RTreeNode<T>[]) c.neighbours));
                 }
-                n.parent.children.remove(n);
+                n.neighbours[3].neighbours.remove(n);
             }
             else tighten(n);
 
-            n = n.parent;
+            n = (RTreeNode<T>) n.neighbours[3];
         }
 
         for (RTreeNode ne: q) {
@@ -197,12 +188,10 @@ public class RTree<T extends Comparable<T>> {
         if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
         if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        Entry e = new Entry(coords, dimensions, entry);
-        RTreeNode l = chooseLeaf(root, e);
-        l.children.add(e);
-        e.parent = l;
+        RTreeNode<T> l = chooseLeaf(root, entry);
+        l.addEntry(entry);
 
-        if ( l.children.size() > maxEntries ) {
+        if ( l.neighbours.length > maxEntries ) {
             RTreeNode[] splits = splitRTreeNode(l);
             adjustTree(splits[0], splits[1]);
         }
@@ -212,15 +201,15 @@ public class RTree<T extends Comparable<T>> {
         }
     }
 
-    private void adjustTree(RTreeNode n, RTreeNode nn) {
+    private void adjustTree(RTreeNode<T> n, RTreeNode<T> nn) {
         if ( n == root ) {
             if ( nn != null ) {
                 // build new root and add children.
                 root = buildRoot(false);
-                root.children.add(n);
-                n.parent = root;
-                root.children.add(nn);
-                nn.parent = root;
+                root.addChild(n);
+                n.neighbours[2] = root;
+                root.addChild(nn);
+                nn.neighbours[2] = root;
             }
             tighten(root);
             return;
@@ -228,63 +217,69 @@ public class RTree<T extends Comparable<T>> {
         tighten(n);
         if ( nn != null ) {
             tighten(nn);
-            if ( n.parent.children.size() > maxEntries ) {
-                RTreeNode[] splits = splitRTreeNode(n.parent);
+            if ( n.neighbours[3].neighbours.length > maxEntries ) {
+                RTreeNode[] splits = splitRTreeNode(n.neighbours[3]);
                 adjustTree(splits[0], splits[1]);
             }
         }
-        else if ( n.parent != null ) {
-            adjustTree(n.parent, null);
+        else if ( n.neighbours[3] != null ) {
+            adjustTree((RTreeNode<T>) n.neighbours[3], null);
         }
     }
 
-    private RTreeNode[] splitRTreeNode(RTreeNode n) {
-        @SuppressWarnings("unchecked")
-        RTreeNode[] nn = new RTree.RTreeNode[] {n, new RTreeNode(n.coords, n.dimensions, n.leaf)};
-        nn[1].parent = n.parent;
-        if ( nn[1].parent != null ) {
-            nn[1].parent.children.add(nn[1]);
+    /**
+     * TODO: This needs work (they don't maintain binary structure)
+     * @param n
+     * @return
+     */
+    private RTreeNode<T>[] splitRTreeNode(RTreeNode<T> n) {
+        RTreeNode<T>[] nn = new RTreeNode<T>[] {n, new RTreeNode<T>(n.getRanges(), n.isLeaf())};
+        nn[1].neighbours[3] = n.neighbours[3];
+        if ( nn[1].neighbours[3] != null ) {
+            ((RTreeNode<T>) nn[1].neighbours[3]).addChild(nn[1]);
         }
-        LinkedList<RTreeNode> cc = new LinkedList<RTreeNode>(n.children);
-        n.children.clear();
-        RTreeNode[] ss = pickSeeds(cc);
-        nn[0].children.add(ss[0]);
-        nn[1].children.add(ss[1]);
+        LinkedList<T> cc = new LinkedList<>(n.getItem());
+
+        n.neighbours = new RTreeNode[] {null, null, null}; // Clear the neighbours
+        RTreeNode<T>[] ss = pickSeeds(cc);
+        nn[0].addChild(ss[0]);
+        nn[1].addChild(ss[1]);
         while ( !cc.isEmpty() ) {
-            if ((nn[0].children.size() >= minEntries) &&
-                (nn[1].children.size() + cc.size() == minEntries)) {
+            if ((nn[0].neighbours.length >= minEntries) &&
+                (nn[1].neighbours.length + cc.size() == minEntries)) {
 
-                nn[1].children.addAll(cc);
+                nn[1].neighbours.addAll(cc);
                 cc.clear();
                 return nn;
             }
 
-            else if ((nn[1].children.size() >= minEntries) &&
-                     (nn[1].children.size() + cc.size() == minEntries)) {
-                nn[0].children.addAll(cc);
+            else if ((nn[1].neighbours.length >= minEntries) &&
+                     (nn[1].neighbours.length + cc.size() == minEntries)) {
+                nn[0].neighbours.addAll(cc);
                 cc.clear();
                 return nn;
             }
 
-            RTreeNode c = cc.pop();
-            RTreeNode preferred;
+            T c = cc.pop();
+            T preferred;
 
-            double e0 = getRequiredExpansion(nn[0].coords, nn[0].dimensions, c);
-            double e1 = getRequiredExpansion(nn[1].coords, nn[1].dimensions, c);
+            double e0 = nn[0].getAreaExpansion(c);
+            double e1 = nn[1].getAreaExpansion(c);
             if (e0 < e1) preferred = nn[0];
             else if (e0 > e1) preferred = nn[1];
             else {
-                double a0 = getArea(nn[0].dimensions);
-                double a1 = getArea(nn[1].dimensions);
+                double a0 = getArea(nn[0]);
+                double a1 = getArea(nn[1]);
+
                 if (a0 < a1) preferred = nn[0];
                 else if (e0 > a1) preferred = nn[1];
                 else {
-                    if (nn[0].children.size() < nn[1].children.size()) preferred = nn[0];
-                    else if (nn[0].children.size() > nn[1].children.size()) preferred = nn[1];
+                    if (nn[0].neighbours.length < nn[1].neighbours.length) preferred = nn[0];
+                    else if (nn[0].neighbours.length > nn[1].neighbours.length) preferred = nn[1];
                     else preferred = nn[(int)Math.round(Math.random())];
                 }
             }
-            preferred.children.add(c);
+            preferred.addChild(c);
         }
 
         tighten(nn[0]);
@@ -293,29 +288,29 @@ public class RTree<T extends Comparable<T>> {
     }
 
 
-    private RTree<T>.RTreeNode[] pickSeeds(LinkedList<RTreeNode> nn) {
-        RTree<T>.RTreeNode[] bestPair = null;
+    private RTreeNode<T>[] pickSeeds(LinkedList<RTreeNode<T>> nn) {
+        RTreeNode<T>[] bestPair = null;
         double bestSep = 0.0f;
         for ( int i = 0; i < numDims; i++ ) {
             double dimLb = Double.MAX_VALUE, dimMinUb = Double.MAX_VALUE;
             double dimUb = -1.0f * Double.MAX_VALUE, dimMaxLb = -1.0f * Double.MAX_VALUE;
-            RTreeNode nMaxLb = null, nMinUb = null;
-            for ( RTreeNode n: nn ) {
-                if ( n.coords[i] < dimLb ) dimLb = n.coords[i];
-                if ( n.dimensions[i] + n.coords[i] > dimUb ) dimUb = n.dimensions[i] + n.coords[i];
-                if ( n.coords[i] > dimMaxLb ) {
-                    dimMaxLb = n.coords[i];
+            RTreeNode<T> nMaxLb = null, nMinUb = null;
+            for ( RTreeNode<T> n: nn) {
+                if ( n.getRanges()[i].getFirst() < dimLb ) dimLb = n.getRanges()[i].getFirst();
+                if ( n.getRanges()[i].getSecond() > dimUb ) dimUb = n.getRanges()[i].getSecond();
+                if ( n.getRanges()[i].getFirst() > dimMaxLb ) {
+                    dimMaxLb = n.getRanges()[i].getFirst();
                     nMaxLb = n;
                 }
-                if ( n.dimensions[i] + n.coords[i] < dimMinUb ) {
-                    dimMinUb = n.dimensions[i] + n.coords[i];
+                if ( n.getRanges()[i].getSecond() < dimMinUb ) {
+                    dimMinUb = n.getRanges()[i].getSecond()
                     nMinUb = n;
                 }
             }
 
             double sep = Math.abs((dimMinUb - dimMaxLb) / (dimUb - dimLb));
             if ( sep >= bestSep ) {
-                bestPair = new RTree.RTreeNode[] { nMaxLb, nMinUb };
+                bestPair = new RTreeNode[]{ nMaxLb, nMinUb };
                 bestSep = sep;
             }
         }
@@ -325,33 +320,33 @@ public class RTree<T extends Comparable<T>> {
         return bestPair;
     }
 
-    private void tighten(RTreeNode n) {
-        double[] minCoords = new double[n.coords.length];
-        double[] maxDimensions = new double[n.dimensions.length];
+    private void tighten(RTreeNode<T> n) {
+        double[] minCoords = new double[n.getRanges().length];
+        double[] maxDimensions = new double[n.getRanges().length];
         for (int i = 0; i < minCoords.length; i++ ) {
             minCoords[i] = Double.MAX_VALUE;
             maxDimensions[i] = 0.0f;
 
-            for (RTreeNode c: n.children) {
+            for (RTreeNode<T> c: (RTreeNode<T>[])n.neighbours) {
                 // we may have bulk-added a bunch of children to a node (eg. in splitRTreeNode)
                 // so here we just enforce the child->parent relationship.
-                c.parent = n;
-                if (c.coords[i] < minCoords[i]) minCoords[i] = c.coords[i];
-                if ((c.coords[i] + c.dimensions[i]) > maxDimensions[i]) maxDimensions[i] = (c.coords[i] + c.dimensions[i]);
+                c.neighbours[3] = n;
+                if (c.getRanges()[i].getFirst() < minCoords[i]) minCoords[i] = c.getRanges()[i].getFirst();
+                if (c.getRanges()[i].getSecond() > maxDimensions[i]) maxDimensions[i] = c.getRanges()[i].getSecond();
             }
         }
         System.arraycopy(minCoords, 0, n.coords, 0, minCoords.length);
         System.arraycopy(maxDimensions, 0, n.dimensions, 0, maxDimensions.length);
     }
 
-    private RTree<T>.RTreeNode chooseLeaf(RTree<T>.RTreeNode n, RTree<T>.Entry e) {
-        if ( n.leaf ) {
+    private RTreeNode<T> chooseLeaf(RTreeNode<T> n, T e) {
+        if ( n.isLeaf() ) {
             return n;
         }
         double minInc = Double.MAX_VALUE;
-        RTreeNode next = null;
-        for ( RTree<T>.RTreeNode c: n.children ) {
-            double inc = getRequiredExpansion( c.coords, c.dimensions, e );
+        RTreeNode<T> next = null;
+        for ( RTreeNode<T> c: (RTreeNode<T>[]) n.neighbours ) {
+            double inc = getRequiredExpansion( c, e );
             if ( inc < minInc ) {
                 minInc = inc;
                 next = c;
@@ -359,7 +354,7 @@ public class RTree<T extends Comparable<T>> {
             else if ( inc == minInc ) {
                 double curArea = 1.0f;
                 double thisArea = 1.0f;
-                for ( int i = 0; i < c.dimensions.length; i++ ) {
+                for ( int i = 0; i < c.getRanges().length; i++ ) {
                     curArea *= next.dimensions[i];
                     thisArea *= c.dimensions[i];
                 }
@@ -368,35 +363,6 @@ public class RTree<T extends Comparable<T>> {
         }
         return chooseLeaf(next, e);
     }
-
-    /**
-     * Returns the increase in area necessary for the given rectangle to cover the given entry.
-     */
-    private double getRequiredExpansion( double[] coords, double[] dimensions, RTreeNode e ) {
-        double area = getArea(dimensions);
-        double[] deltas = new double[dimensions.length];
-
-        for ( int i = 0; i < deltas.length; i++ ) {
-            if (coords[i] + dimensions[i] < e.coords[i] + e.dimensions[i])
-                deltas[i] = e.coords[i] + e.dimensions[i] - coords[i] - dimensions[i];
-            else if (coords[i] + dimensions[i] > e.coords[i] + e.dimensions[i])
-                deltas[i] = coords[i] - e.coords[i];
-        }
-
-        double expanded = 1.0f;
-        for (int i = 0; i < dimensions.length; i++)
-            area *= dimensions[i] + deltas[i];
-
-        return (expanded - area);
-    }
-
-    private double getArea(double[] dimensions) {
-        double area = 1.0f;
-        for (double dimension : dimensions) area *= dimension;
-
-        return area;
-    }
-
 
     public void clear() { root = buildRoot(true); } // Garbage Collector will clear the rest
 

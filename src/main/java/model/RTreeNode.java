@@ -1,9 +1,8 @@
 package model;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class RTreeNode<T> extends model.Node<List<T>>{
+public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     // data members
     private String id;
     private Pair<Double, Double>[] ranges;
@@ -23,8 +22,7 @@ public class RTreeNode<T> extends model.Node<List<T>>{
 
     public RTreeNode(List<T> item, Pair<Double, Double>[] ranges, boolean leaf, RTreeNode<T> parent) {
         super(item);
-        neighbours = new RTreeNode[3];
-        neighbours[2] = parent;
+        neighbours = new RTreeNode[2];
         this.leaf = leaf;
         this.ranges = ranges;
     }
@@ -46,6 +44,47 @@ public class RTreeNode<T> extends model.Node<List<T>>{
         }
 
         return true;
+    }
+
+    static public double getArea(RTreeNode node) {
+        double area = 1.0f;
+        for (Pair<Double, Double> range : node.ranges) area *= (range.getSecond() - range.getFirst());
+        return area;
+    }
+
+    void addChild(RTreeNode node) {
+
+    }
+
+    void removeChild(RTreeNode node) {
+
+    }
+
+    /**
+     * Returns increase in area to include given element
+     * @param e - The element that may be inserted
+     */
+    double getAreaExpansion(T e) {
+        double area = getArea(this); // Original Area
+        double expanded = 1.0f;           // New area
+
+        double[] e_vals = e.getParamValues(); // Get the parametrized values
+
+        if (e_vals.length != ranges.length) throw new IllegalArgumentException("e的参数数不对");
+
+        double[] deltas = new double[this.getRanges().length];
+
+        for ( int i = 0; i < e_vals.length; i++ ) {
+            // Expand end point
+            if (this.ranges[i].getSecond() < e_vals[i])
+                area *= e_vals[i] - this.getRanges()[i].getFirst();
+
+            // Expand start point
+            if (this.ranges[i].getFirst() > e_vals[i])
+                area *= this.ranges[i].getSecond() - e_vals[i];
+        }
+
+        return expanded - area;
     }
 }
 
