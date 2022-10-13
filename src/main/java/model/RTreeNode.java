@@ -40,11 +40,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     public void addEntry(T entry) {
         this.item.add(entry);
-        RTreeNode<T> currNode = this;
-        while (currNode != null) {
-            ++currNode.subtreeEntries;
-            currNode = (RTreeNode<T>) currNode.neighbours[2];
-        }
+        ++subtreeEntries;
     }
 
     static public boolean isOverlap(Range<Double>[] r1, Range<Double>[] r2 ) {

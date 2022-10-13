@@ -109,7 +109,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
 
         // RTreeNode found, size decrease and condense the tree
         if ( toRemove != null ) {
-            // condenseTree(l);
+            condenseTree(l);
             size--;
         }
 
@@ -145,34 +145,32 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
      */
 
     private void condenseTree(RTreeNode<T> n) {
-        Set<RTreeNode<T>> to_die = new HashSet<>();
+        Set<T> orphans = new HashSet<>();
 
         while ( n != root ) {
             if ( n.isLeaf() && (n.getItem().size() < minEntries)) {
-                to_die.add(n);
+                orphans.addAll(n.getItem());
                 n.neighbours[2].neighbours[(int) (n.getId() % 2)] = null;
-                if (n.neighbours[(int) ((n.getId() + 1) % 2)] == null) // no children: you are leaf
-                    ((RTreeNode<T>) n.neighbours[2]).setLeaf(true);
             }
-            else if (!n.isLeaf() && (n.neighbours.length < minEntries)) {
-                // probably a more efficient way to do this...
-                Queue<RTreeNode<T>> toVisit = new LinkedList<>(List.of((RTreeNode<T>[]) n.neighbours));
-                while (!toVisit.isEmpty()) {
-                    RTreeNode<T> c = toVisit.remove();
-                    if ( c.isLeaf() ) q.addAll(List.of((RTreeNode<T>[]) c.neighbours));
-                    else toVisit.addAll(List.of((RTreeNode<T>[]) c.neighbours));
-                }
-                n.neighbours[2].neighbours.remove(n);
+            else if (!n.isLeaf() && (n.neighbours.length < 1)) {
+                n.neighbours[2].neighbours[(int) (n.getId() % 2)] = null;
             }
-            else tighten(n);
+            else n.tighten();
 
             n = (RTreeNode<T>) n.neighbours[2];
         }
 
-        for (RTreeNode<T> ne: to_die) {
-            @SuppressWarnings("unchecked")
-            Entry e = (Entry)ne;
-            insert(e.coords, e.dimensions, e.entry);
+        // now n is the root
+        if (n.neighbours[0] == null || n.neighbours[1] == null) {
+            // roots with one child are not allowed
+            RTreeNode<T> child = (RTreeNode<T>) (n.neighbours[0] == null ? n.neighbours[1] : n.neighbours[0]);
+            child.neighbours[2] = null;
+            root = child;
+        }
+
+        for (T entry: orphans) {
+            // add the orphans back
+            insert(entry);
         }
     }
 
@@ -188,7 +186,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
 
         // It is time to die leaf, you are too fat
         if ( leaf.neighbours.length > maxEntries ) {
-            RTreeNode<T>[] splits = splitRreeNode(leaf);
+            RTreeNode<T>[] splits = splitRTreeNode(leaf);
             adjustTree(splits[0], splits[1]);
         }
         // No splitting, just adjust the tree
