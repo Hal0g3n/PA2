@@ -38,8 +38,8 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     public long getId() { return this.id;}
 
-    public void addEntry(T entry) {
-        this.item.add(entry);
+    public void addEntries(T... entries) {
+        this.item.addAll(Arrays.asList(entries));
         ++subtreeEntries;
     }
 
