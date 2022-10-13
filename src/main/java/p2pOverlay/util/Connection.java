@@ -4,4 +4,5 @@ import p2pOverlay.Peer;
 
 import java.net.InetSocketAddress;
 
-public record Connection(Peer peer, InetSocketAddress address) { }
+public record Connection(int peerID, InetSocketAddress address) {
+}

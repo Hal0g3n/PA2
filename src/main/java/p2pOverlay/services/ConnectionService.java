@@ -2,10 +2,7 @@ package p2pOverlay.services;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -13,15 +10,12 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
-import p2pOverlay.DiscardClientHandler;
-import p2pOverlay.DiscardServerHandler;
+import p2pOverlay.handlers.ConnectionClientHandler;
 import p2pOverlay.handlers.ConnectionServerHandler;
 import p2pOverlay.util.ServerUtil;
 
 import javax.net.ssl.SSLException;
 import java.security.cert.CertificateException;
-import java.util.LinkedList;
-import java.util.Queue;
 
 public class ConnectionService {
 
@@ -32,19 +26,14 @@ public class ConnectionService {
     *
     * */
 
-    private Queue<String> incomingMessages;
+    private PeerService ps;
 
-    public ConnectionService() throws InterruptedException {
-        this.incomingMessages = new LinkedList<>();
-        startServer(8009, incomingMessages);
+    public ConnectionService(PeerService ps) throws InterruptedException {
+        this.ps = ps;
+        startServer(8019, ps);
     }
 
-    public String getMessage(){
-        if (!incomingMessages.isEmpty()) return incomingMessages.remove();
-        else return null;
-    }
-
-    public ChannelFuture startServer(int port, Queue<String> msgQueue) throws InterruptedException {
+    public ChannelFuture startServer(int port, PeerService ps) throws InterruptedException {
         ChannelFuture closeFuture = null;
         try {
             final SslContext sslCtx = ServerUtil.buildSslContext();
@@ -54,6 +43,9 @@ public class ConnectionService {
                 ServerBootstrap b = new ServerBootstrap();
                 b.group(bossGroup, workerGroup)
                         .channel(NioServerSocketChannel.class)
+                        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
+                        .option(ChannelOption.SO_KEEPALIVE, true)
+                        .option(ChannelOption.SO_BACKLOG, 100)
                         .handler(new LoggingHandler(LogLevel.INFO))
                         .childHandler(new ChannelInitializer<SocketChannel>() {
                             @Override
@@ -62,20 +54,20 @@ public class ConnectionService {
                                 if (sslCtx != null) {
                                     p.addLast(sslCtx.newHandler(ch.alloc()));
                                 }
-                                p.addLast(new ConnectionServerHandler(msgQueue));
+                                p.addLast(new ConnectionServerHandler(ps));
                             }
                         });
 
                 // Bind and start to accept incoming connections.
-                closeFuture = b.bind(port).sync();
+                final ChannelFuture bindFuture = b.bind(port).sync();
 
-                // Wait until the server socket is closed.
-                // In this example, this does not happen, but you can do that to gracefully
-                // shut down your server.
-                closeFuture.channel().closeFuture().sync();
+                if(bindFuture.isSuccess()){
+                    System.out.printf("Server bound on localhost:%d\n",port);
+                    final Channel serverChannel = bindFuture.channel();
+                    closeFuture = serverChannel.closeFuture();
+                }
             } finally {
-                workerGroup.shutdownGracefully();
-                bossGroup.shutdownGracefully();
+
             }
         } catch (CertificateException | SSLException e) {
             throw new RuntimeException(e);
@@ -99,7 +91,7 @@ public class ConnectionService {
                                 if (sslCtx != null) {
                                     p.addLast(sslCtx.newHandler(ch.alloc(), ip, port));
                                 }
-                                p.addLast(new DiscardClientHandler());
+                                p.addLast(new ConnectionClientHandler());
                             }
                         });
 
