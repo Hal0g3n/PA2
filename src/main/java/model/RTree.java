@@ -150,21 +150,21 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         while ( n != root ) {
             if ( n.isLeaf() && (n.getItem().size() < minEntries)) {
                 orphans.addAll(n.getItem());
-                n.neighbours[2].neighbours[(int) (n.getId() % 2)] = null;
+                n.neighbours[3].neighbours[(int) (n.getId() % 2)] = null;
             }
-            else if (!n.isLeaf() && (n.neighbours.length < 1)) {
-                n.neighbours[2].neighbours[(int) (n.getId() % 2)] = null;
+            else if (!n.isLeaf() && (n.getNumChildren() < 1)) {
+                n.neighbours[3].neighbours[(int) (n.getId() % 2)] = null;
             }
             else n.tighten();
 
-            n = (RTreeNode<T>) n.neighbours[2];
+            n = (RTreeNode<T>) n.neighbours[3];
         }
 
         // now n is the root
         if (n.neighbours[0] == null || n.neighbours[1] == null) {
             // roots with one child are not allowed
             RTreeNode<T> child = (RTreeNode<T>) (n.neighbours[0] == null ? n.neighbours[1] : n.neighbours[0]);
-            child.neighbours[2] = null;
+            child.neighbours[3] = null;
             root = child;
         }
 
@@ -199,9 +199,9 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
                 // build new root and add children.
                 root = buildRoot(false);
                 root.addChild(n);
-                n.neighbours[2] = root;
+                n.neighbours[3] = root;
                 root.addChild(nn);
-                nn.neighbours[2] = root;
+                nn.neighbours[3] = root;
             }
             root.tighten();
             return;
@@ -209,13 +209,13 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         n.tighten();
         if ( nn != null ) {
             nn.tighten();
-//            if ( n.neighbours[2].neighbours.length > maxEntries ) {
-//                RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[2]);
+//            if ( n.neighbours[3].neighbours.length > maxEntries ) {
+//                RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[3]);
 //                adjustTree(splits[0], splits[1]);
 //            }
         }
-        else if ( n.neighbours[2] != null ) {
-            adjustTree((RTreeNode<T>) n.neighbours[2], null);
+        else if ( n.neighbours[3] != null ) {
+            adjustTree((RTreeNode<T>) n.neighbours[3], null);
         }
     }
 
@@ -227,14 +227,20 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
 
     /*
     private RTreeNode<T>[] splitRTreeNode(RTreeNode<T> n) {
-        RTreeNode<T>[] nn = new RTreeNode<T>[] {n, new RTreeNode<T>(n.getRanges(), n.isLeaf())};
-        nn[1].neighbours[3] = n.neighbours[2];
+        RTreeNode<T>[] nn = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<T>(), n.getRanges(), n.isLeaf(), (RTreeNode<T>) n.neighbours[3])};
         if ( nn[1].neighbours[3] != null ) {
             ((RTreeNode<T>) nn[1].neighbours[3]).addChild(nn[1]);
         }
-        LinkedList<T> cc = new LinkedList<>(n.getItem());
+        LinkedList cc;
+        // TODO: Resolve pickseeds (overload maybe?) to work for both nodes and entries
+        if (n.isLeaf()) {
+            cc = new LinkedList<>(n.getItem());
+        } else {
+            cc = new LinkedList<RTreeNode<T>>();
+            Collections.addAll(cc, n.neighbours[0], n.neighbours[1], n.neighbours[2]);
+        }
 
-        n.neighbours = new RTreeNode[] {null, null, null}; // Clear the neighbours
+        n.neighbours = new RTreeNode[] {null, null, null, (RTreeNode) n.neighbours[3]}; // Clear the neighbours
         RTreeNode<T>[] ss = pickSeeds(cc);
         nn[0].addChild(ss[0]);
         nn[1].addChild(ss[1]);
