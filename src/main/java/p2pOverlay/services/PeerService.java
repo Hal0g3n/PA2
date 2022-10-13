@@ -6,9 +6,7 @@ import p2pOverlay.Peer;
 import p2pOverlay.util.Connection;
 import p2pOverlay.util.Encoding;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Objects;
+import java.util.*;
 
 public class PeerService {
 
@@ -70,6 +68,23 @@ public class PeerService {
         connectionService.sendMessage("register " + port, "127.0.01", 8080);
     }
 
+    public void sendMsg(int peerId, String message){
+        // ok so basically right now we only relay messages to the gateway
+        // but in the future, each peer would also store some connections which it knows the peerId of
+        // and it that case, it fills in the port of that peerId as opposed to gateway
+
+        // TODO: pull ip and port from peer pointer table when the time comes
+        System.out.println("Attempting ping");
+        sendMsg(peerId, message, "127.0.0.1", 8080);
+    }
+
+    private void sendMsg(int peerId, String message, String ip, int port){
+        connectionService.sendMessage("ping " + head.id + " " + peerId + " " + message, ip, port);
+    }
+
+    // temporary measure while i think of how to better do this
+    private Queue<ChannelHandlerContext> ctx_queue = new LinkedList<>();
+
     public void handleMessage(ChannelHandlerContext ctx, String msg){
         System.out.printf("Handling message %s from %s\n", msg, ctx.channel().remoteAddress());
 
@@ -85,10 +100,42 @@ public class PeerService {
                 ByteBuf out = ctx.alloc().buffer(demoResponse.length() * 2);
                 out.writeBytes(Encoding.str_to_bb(demoResponse));
                 ctx.writeAndFlush(out);
+                ctx.close(); // seems like CTX is blocking...
             }
             case "approved" -> {
                 head.setId(Integer.parseInt(tokens[1])); // set peerID based on gateway response
                 System.out.println("Approved by gateway! Given ID " + tokens[1]);
+            }
+            case "ping" -> {
+                int id = Integer.parseInt(tokens[2]);
+                if(head.id == id){
+                    // yeah gotta fix this
+                    int returnId = Integer.parseInt(tokens[1]);
+                    String demoResponse = String.format("pong %d %d %s", id, returnId, tokens[3]);
+                    ByteBuf out = ctx.alloc().buffer(demoResponse.length() * 2);
+                    out.writeBytes(Encoding.str_to_bb(demoResponse));
+                    ctx.writeAndFlush(out);
+                    ctx.close();
+                }
+                else {
+                    // i am an intermediate, stow away the ctx to respond later
+                    sendMsg(id, tokens[3], "127.0.0.1", tempCounter.get(id-1));
+                    ctx_queue.add(ctx);
+                }
+            }
+            case "pong" -> {
+                // this logic is incomplete
+                ChannelHandlerContext response = ctx_queue.remove();
+                int id = Integer.parseInt(tokens[2]);
+                if(head.id == id){
+                    System.out.printf("Received pong from %s, msg: %s\n", tokens[1], tokens[3]);
+                } else {
+                String demoResponse = msg;
+                ByteBuf out = ctx.alloc().buffer(demoResponse.length() * 2);
+                out.writeBytes(Encoding.str_to_bb(demoResponse));
+                ctx.writeAndFlush(out);
+                ctx.close();
+            }
             }
         }
 
