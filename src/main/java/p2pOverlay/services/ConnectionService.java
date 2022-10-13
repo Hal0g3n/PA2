@@ -28,9 +28,9 @@ public class ConnectionService {
 
     private PeerService ps;
 
-    public ConnectionService(PeerService ps) throws InterruptedException {
+    public ConnectionService(PeerService ps, int port) throws InterruptedException {
         this.ps = ps;
-        startServer(8019, ps);
+        startServer(port, ps);
     }
 
     public ChannelFuture startServer(int port, PeerService ps) throws InterruptedException {
@@ -91,7 +91,7 @@ public class ConnectionService {
                                 if (sslCtx != null) {
                                     p.addLast(sslCtx.newHandler(ch.alloc(), ip, port));
                                 }
-                                p.addLast(new ConnectionClientHandler());
+                                p.addLast(new ConnectionClientHandler(message, ps));
                             }
                         });
 

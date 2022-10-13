@@ -24,6 +24,8 @@ public class Peer {
 
     public Peer(){ this(-1); }
 
+    public void setId(int id){this.id = id;}
+
     // TODO: check if ring level exists
     public void updateTable(int h, Connection clockwiseNeighbour, Connection antiClockwiseNeighbour) {
         clockwise.set(h, clockwiseNeighbour);

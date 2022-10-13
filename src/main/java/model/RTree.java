@@ -185,12 +185,12 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         leaf.addEntry(entry);
 
         // It is time to die leaf, you are too fat
-        if ( leaf.neighbours.length > maxEntries ) {
-            RTreeNode<T>[] splits = splitRTreeNode(leaf);
-            adjustTree(splits[0], splits[1]);
-        }
-        // No splitting, just adjust the tree
-        else adjustTree(leaf, null);
+//        if ( leaf.neighbours.length > maxEntries ) {
+//            RTreeNode<T>[] splits = splitRTreeNode(leaf);
+//            adjustTree(splits[0], splits[1]);
+//        }
+//        // No splitting, just adjust the tree
+//        else adjustTree(leaf, null);
     }
 
     private void adjustTree(RTreeNode<T> n, RTreeNode<T> nn) {
@@ -209,10 +209,10 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         n.tighten();
         if ( nn != null ) {
             nn.tighten();
-            if ( n.neighbours[2].neighbours.length > maxEntries ) {
-                RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[2]);
-                adjustTree(splits[0], splits[1]);
-            }
+//            if ( n.neighbours[2].neighbours.length > maxEntries ) {
+//                RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[2]);
+//                adjustTree(splits[0], splits[1]);
+//            }
         }
         else if ( n.neighbours[2] != null ) {
             adjustTree((RTreeNode<T>) n.neighbours[2], null);

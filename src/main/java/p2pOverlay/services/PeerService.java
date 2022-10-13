@@ -6,6 +6,8 @@ import p2pOverlay.Peer;
 import p2pOverlay.util.Connection;
 import p2pOverlay.util.Encoding;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 
 public class PeerService {
@@ -17,12 +19,18 @@ public class PeerService {
     *
     * */
 
-    Peer head;
+    private Peer head;
     private ConnectionService connectionService;
+    private int port;
 
+    private ArrayList<Integer> tempCounter;
 
     // TODO: Finish constructor, doing routing first
-    public PeerService() { this.head = new Peer(); }
+    public PeerService(int port) {
+        this.head = new Peer();
+        this.port = port;
+        this.tempCounter = new ArrayList<>();
+    }
 
     // TODO: routing, join, leave
     // Assumes both strings are of equal length
@@ -47,12 +55,9 @@ public class PeerService {
 
     // Connection object is not supposed to contain a peer object, only the peerID and address
 
-
-
-
     public void startService(){
         try {
-            this.connectionService = new ConnectionService(this);
+            this.connectionService = new ConnectionService(this, port);
             System.out.println("in main, called");
 
         } catch (InterruptedException e) {
@@ -60,13 +65,32 @@ public class PeerService {
         }
     }
 
+    public void register(){
+        // TODO: make this less jank
+        connectionService.sendMessage("register " + port, "127.0.01", 8080);
+    }
 
     public void handleMessage(ChannelHandlerContext ctx, String msg){
         System.out.printf("Handling message %s from %s\n", msg, ctx.channel().remoteAddress());
 
-        String demoResponse = "this is a response";
-        ByteBuf out = ctx.alloc().buffer(demoResponse.length()*2);
-        out.writeBytes(Encoding.str_to_bb(demoResponse));
-        ctx.writeAndFlush(out);
+        String[] tokens = msg.split(" ");
+        String command = tokens[0];
+        System.out.println(Arrays.toString(tokens));
+        switch (command) {
+            case "register" -> {
+                // incoming registration, thus i am the gateway
+                head.setId(0);
+                tempCounter.add(Integer.parseInt(tokens[1]));
+                String demoResponse = "approved " + tempCounter.size();
+                ByteBuf out = ctx.alloc().buffer(demoResponse.length() * 2);
+                out.writeBytes(Encoding.str_to_bb(demoResponse));
+                ctx.writeAndFlush(out);
+            }
+            case "approved" -> {
+                head.setId(Integer.parseInt(tokens[1])); // set peerID based on gateway response
+                System.out.println("Approved by gateway! Given ID " + tokens[1]);
+            }
+        }
+
     }
 }
