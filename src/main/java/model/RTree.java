@@ -78,10 +78,10 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         else // If not leaf, travel down the children
             for (int i = 0; i < 2; ++i) { // 2 children
                 // Subtree does not contain the query range
-                if (!RTreeNode.isOverlap(ranges, n.neighbours[i].getRanges())) continue;
+                if (!RTreeNode.isOverlap(ranges, ((RTreeNode<T>) n.neighbours[i]).getRanges())) continue;
 
                 // If leaf domain is overlapping
-                search(ranges, n.neighbours[i], results);
+                search(ranges, (RTreeNode<T>) n.neighbours[i], results);
             }
     }
 
@@ -117,9 +117,8 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         return (toRemove != null);
     }
 
-    private RTreeNode<T> findLeaf(RTreeNode<T> n, double[] coords, double[] dimensions, T entry) {
-        if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
-        if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+    private RTreeNode<T> findLeaf(RTreeNode<T> n, Pair<Double, Double>[] ranges, T entry) {
+        if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         if (n.isLeaf())
             for (T e: n.getItem()) {
@@ -130,10 +129,10 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         else
             for ( int i = 0; i < 2; ++i ) {
                 // If child does not include entry range
-                if (!RTreeNode.isOverlap((RTreeNode<T>[]) n.neighbours[i]).getRanges(), ranges)) continue;
+                if (!RTreeNode.isOverlap(((RTreeNode<T>) n.neighbours[i]).getRanges(), ranges)) continue;
 
                 // Recurse to find entry in children
-                RTreeNode<T> result = findLeaf((RTreeNode<T>[]) n.neighbours[i], ranges, entry);
+                RTreeNode<T> result = findLeaf((RTreeNode<T>) n.neighbours[i], ranges, entry);
                 if ( result != null ) return result;
             }
 
@@ -145,6 +144,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
      * Tree Compression with node as subtree root
      * @param n the subtree root
      */
+    /*
     private void condenseTree(RTreeNode<T> n) {
         Set<RTreeNode> q = new HashSet<>();
 
@@ -174,6 +174,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
             insert(e.coords, e.dimensions, e.entry);
         }
     }
+     */
 
     /**
      * Inserts the given entry into the model.RTree, associated with the given rectangle.
@@ -182,6 +183,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
      * @param dimensions the dimensions of the rectangle
      * @param entry the entry to insert
      */
+    /*
     public void insert(double[] coords, double[] dimensions, T entry) {
         if (coords.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
         if (dimensions.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
@@ -216,7 +218,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         if ( nn != null ) {
             tighten(nn);
             if ( n.neighbours[3].neighbours.length > maxEntries ) {
-                RTreeNode[] splits = splitRTreeNode(n.neighbours[3]);
+                RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[3]);
                 adjustTree(splits[0], splits[1]);
             }
         }
@@ -224,12 +226,15 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
             adjustTree((RTreeNode<T>) n.neighbours[3], null);
         }
     }
+     */
 
     /**
      * TODO: This needs work (they don't maintain binary structure)
      * @param n
      * @return
      */
+
+    /*
     private RTreeNode<T>[] splitRTreeNode(RTreeNode<T> n) {
         RTreeNode<T>[] nn = new RTreeNode<T>[] {n, new RTreeNode<T>(n.getRanges(), n.isLeaf())};
         nn[1].neighbours[3] = n.neighbours[3];
@@ -284,8 +289,13 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         tighten(nn[1]);
         return nn;
     }
+     */
 
-
+    /**
+     * TODO: Fix up this function
+     * @param nn
+     * @return
+     */
     private RTreeNode<T>[] pickSeeds(LinkedList<RTreeNode<T>> nn) {
         RTreeNode<T>[] bestPair = null;
         double bestSep = 0.0f;
@@ -301,7 +311,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
                     nMaxLb = n;
                 }
                 if ( n.getRanges()[i].getSecond() < dimMinUb ) {
-                    dimMinUb = n.getRanges()[i].getSecond()
+                    dimMinUb = n.getRanges()[i].getSecond();
                     nMinUb = n;
                 }
             }
@@ -318,6 +328,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         return bestPair;
     }
 
+    /*
     private void tighten(RTreeNode<T> n) {
         double[] minCoords = new double[n.getRanges().length];
         double[] maxDimensions = new double[n.getRanges().length];
@@ -336,6 +347,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         System.arraycopy(minCoords, 0, n.coords, 0, minCoords.length);
         System.arraycopy(maxDimensions, 0, n.dimensions, 0, maxDimensions.length);
     }
+    */
 
     private RTreeNode<T> chooseLeaf(RTreeNode<T> n, T e) {
         if ( n.isLeaf() ) {
@@ -344,7 +356,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         double minInc = Double.MAX_VALUE;
         RTreeNode<T> next = null;
         for ( RTreeNode<T> c: (RTreeNode<T>[]) n.neighbours ) {
-            double inc = getRequiredExpansion( c, e );
+            double inc = c.getAreaExpansion( e );
             if ( inc < minInc ) {
                 minInc = inc;
                 next = c;
@@ -353,12 +365,14 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
                 double curArea = 1.0f;
                 double thisArea = 1.0f;
                 for ( int i = 0; i < c.getRanges().length; i++ ) {
-                    curArea *= next.dimensions[i];
-                    thisArea *= c.dimensions[i];
+                    assert next != null;
+                    curArea *= next.getRanges()[i].getSecond() - next.getRanges()[i].getFirst();
+                    thisArea *= c.getRanges()[i].getSecond() - c.getRanges()[i].getFirst();
                 }
                 if ( thisArea < curArea ) next = c;
             }
         }
+        assert next != null;
         return chooseLeaf(next, e);
     }
 

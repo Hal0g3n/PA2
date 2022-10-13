@@ -4,8 +4,7 @@ import java.util.List;
 
 public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     // data members
-    private String id;
-    public RTreeNode<T>[] neighbours;
+    private long id;
     private Pair<Double, Double>[] ranges;
     private boolean leaf;
     public boolean isLeaf() {return leaf;}
