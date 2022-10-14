@@ -200,7 +200,12 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
         // Calculate Difference and return that
         return expanded - getArea(this);
+    }
 
+    @Override
+    public boolean equals(Object o) {
+        // overload of equals just in case, used in removeChild
+        return (o instanceof RTreeNode && this.id == ((RTreeNode<T>) o).id);
     }
 }
 
