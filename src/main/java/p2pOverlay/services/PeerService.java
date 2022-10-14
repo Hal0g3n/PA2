@@ -32,9 +32,11 @@ public class PeerService {
 
     // TODO: routing, join, leave
     // Assumes both strings are of equal length
-    private int commonPrefixLen(String a, String b) {
-        for (int i = 0; i < a.length(); i++) {
-            if (a.charAt(i) != b.charAt(i)) return i;
+    public static int commonPrefixLen(BitSet a, BitSet b) {
+        int maxLength = Math.max(a.length(), b.length());
+
+        for (int i = maxLength - 1; i >= 0; i--) {
+            if (a.get(i) != b.get(i)) return maxLength - i - 1;
         }
         return a.length();
     }
@@ -158,4 +160,11 @@ public class PeerService {
 
     }
 
+    // Testing bitset
+//    public static void main(String[] args) {
+//        BitSet bitSet = BitSet.valueOf(new long[] {11});
+//        BitSet bitSet1 = BitSet.valueOf(new long[] {10});
+//
+//        System.out.println(commonPrefixLen(bitSet, bitSet1));
+//    }
 }
