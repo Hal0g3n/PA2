@@ -108,7 +108,7 @@ public class PeerService {
             }
             case "ping" -> {
                 int id = Integer.parseInt(tokens[2]);
-                if(head.id == id){
+                if(head.getLongId() == id){
                     // yeah gotta fix this
                     int returnId = Integer.parseInt(tokens[1]);
                     String demoResponse = String.format("pong %d %d %s", id, returnId, tokens[3]);
@@ -127,7 +127,7 @@ public class PeerService {
                 // this logic is incomplete
                 ChannelHandlerContext response = ctx_queue.remove();
                 int id = Integer.parseInt(tokens[2]);
-                if(head.id == id){
+                if(head.getLongId() == id){
                     System.out.printf("Received pong from %s, msg: %s\n", tokens[1], tokens[3]);
                 } else {
                 String demoResponse = msg;
@@ -140,4 +140,5 @@ public class PeerService {
         }
 
     }
+
 }
