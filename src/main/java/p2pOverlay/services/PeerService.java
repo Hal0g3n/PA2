@@ -2,10 +2,14 @@ package p2pOverlay.services;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import kotlin.text.Charsets;
 import p2pOverlay.Peer;
 import p2pOverlay.util.Connection;
 import p2pOverlay.util.Encoding;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.*;
 
 public class PeerService {
@@ -95,8 +99,17 @@ public class PeerService {
             case "register" -> {
                 // incoming registration, thus i am the gateway
                 head.setId(0);
+                System.out.print("Input peerID to supply to incoming connection: ");
+                final BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
+                int giveID;
+                try {
+                    giveID = Integer.parseInt(userInput.readLine());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
                 tempCounter.add(Integer.parseInt(tokens[1]));
-                String demoResponse = "approved " + tempCounter.size();
+                String demoResponse = "approved " + giveID;
                 ByteBuf out = ctx.alloc().buffer(demoResponse.length() * 2);
                 out.writeBytes(Encoding.str_to_bb(demoResponse));
                 ctx.writeAndFlush(out);
