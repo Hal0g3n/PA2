@@ -2,6 +2,7 @@ package p2pOverlay;
 
 import p2pOverlay.util.Connection;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.BitSet;
 
@@ -47,6 +48,13 @@ public class Peer {
     }
 
     public void addConnection(String ip, int port, BitSet peerID){
-        
+       knownConnections.add(new Connection(peerID, new InetSocketAddress(ip, port)));
+    }
+
+    public Connection getConnection(BitSet peerID){
+        for(Connection c : knownConnections){
+            if(c.peerID().equals(peerID)) return c;
+        }
+        return null;
     }
 }

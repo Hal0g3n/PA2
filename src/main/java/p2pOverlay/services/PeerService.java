@@ -141,6 +141,7 @@ public class PeerService {
                     // i am an intermediate
                     // program logic is supposed to determine the next peer to send to
                     // for now, we only check if we have the peer to send to, which should be true for the gateway
+                    //Connection connection = head.getConnection();
                     sendMsg(sourceID, targetID, pingMsg, "127.0.0.1", tempCounter.get(1)); // passing the message to peer 2
                     ctx.close();
                 }
