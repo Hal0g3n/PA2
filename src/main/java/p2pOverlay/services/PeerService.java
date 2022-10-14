@@ -68,18 +68,18 @@ public class PeerService {
         connectionService.sendMessage("register " + port, "127.0.01", 8080);
     }
 
-    public void sendMsg(int peerId, String message){
+    public void sendMsg(int targetId, String message){
         // ok so basically right now we only relay messages to the gateway
         // but in the future, each peer would also store some connections which it knows the peerId of
         // and it that case, it fills in the port of that peerId as opposed to gateway
 
         // TODO: pull ip and port from peer pointer table when the time comes
         System.out.println("Attempting ping");
-        sendMsg(peerId, message, "127.0.0.1", 8080);
+        sendMsg(head.getLongId(), targetId, message, "127.0.0.1", 8080);
     }
 
-    private void sendMsg(int peerId, String message, String ip, int port){
-        connectionService.sendMessage("ping " + head.id + " " + peerId + " " + message, ip, port);
+    private void sendMsg(long sourceId, int targetId, String message, String ip, int port){
+        connectionService.sendMessage(String.format("ping %d %d %d %s", sourceId, head.getLongId(), targetId, message), ip, port);
     }
 
     // temporary measure while i think of how to better do this
@@ -106,36 +106,53 @@ public class PeerService {
                 head.setId(Integer.parseInt(tokens[1])); // set peerID based on gateway response
                 System.out.println("Approved by gateway! Given ID " + tokens[1]);
             }
-            case "ping" -> {
-                int id = Integer.parseInt(tokens[2]);
-                if(head.getLongId() == id){
-                    // yeah gotta fix this
-                    int returnId = Integer.parseInt(tokens[1]);
-                    String demoResponse = String.format("pong %d %d %s", id, returnId, tokens[3]);
+            case "ping" -> { // ping sourceID fromID targetID msg
+
+                int sourceID = Integer.parseInt(tokens[1]);
+                // nextID = head.id anyways
+                int targetID = Integer.parseInt(tokens[3]);
+                String pingMsg = tokens[4];
+
+                if(head.getLongId() == targetID){
+                    // we now initiate a pong back
+                    // pong sourceID fromID targetID msg
+                    String demoResponse = String.format(
+                            "pong %d %d %d %s",
+                            targetID, head.getLongId(), sourceID, pingMsg);
                     ByteBuf out = ctx.alloc().buffer(demoResponse.length() * 2);
                     out.writeBytes(Encoding.str_to_bb(demoResponse));
                     ctx.writeAndFlush(out);
                     ctx.close();
                 }
                 else {
-                    // i am an intermediate, stow away the ctx to respond later
-                    sendMsg(id, tokens[3], "127.0.0.1", tempCounter.get(id-1));
-                    ctx_queue.add(ctx);
+                    // i am an intermediate
+                    // program logic is supposed to determine the next peer to send to
+                    // for now, we only check if we have the peer to send to, which should be true for the gateway
+                    sendMsg(sourceID, targetID, pingMsg, "127.0.0.1", tempCounter.get(1)); // passing the message to peer 2
+                    ctx.close();
                 }
             }
-            case "pong" -> {
-                // this logic is incomplete
-                ChannelHandlerContext response = ctx_queue.remove();
-                int id = Integer.parseInt(tokens[2]);
-                if(head.getLongId() == id){
-                    System.out.printf("Received pong from %s, msg: %s\n", tokens[1], tokens[3]);
-                } else {
-                String demoResponse = msg;
-                ByteBuf out = ctx.alloc().buffer(demoResponse.length() * 2);
-                out.writeBytes(Encoding.str_to_bb(demoResponse));
-                ctx.writeAndFlush(out);
-                ctx.close();
-            }
+            case "pong" -> { // pong sourceID fromID targetID msg
+                // the logic should be similar to ping
+                ctx.close(); // you should usually send back an ACK
+
+                int sourceID = Integer.parseInt(tokens[1]);
+                int targetID = Integer.parseInt(tokens[3]);
+                String pongMsg = tokens[4];
+
+                if(head.getLongId() == targetID){ // i am the one who pong'd
+                    System.out.printf("Received a pong from %d! msg : %s\n", sourceID, pongMsg);
+                } else { // keep passing on the pong
+                    // again, there should be program logic for this
+                    // for now, we just pull the port from tempCounter
+
+                    connectionService.sendMessage(String.format(
+                            "pong %d %d %d %s",
+                            sourceID, head.getLongId(), targetID, pongMsg),
+                            "127.0.0.1", tempCounter.get(0));
+                            // we know we have to pong back to peer 1
+
+                }
             }
         }
 

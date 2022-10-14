@@ -46,7 +46,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     public void addEntries(T... entries) {
         this.item.addAll(Arrays.asList(entries));
-        ++numEntries;
+        numEntries += entries.length;
     }
 
     static public boolean isOverlap(Range<Double>[] r1, Range<Double>[] r2 ) {
@@ -70,7 +70,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         return numChildren;
     }
 
-    void addChild(RTreeNode<T> node) {
+    public void addChild(RTreeNode<T> node) {
         for (int i = 0; i < 3; ++i) {
             if (neighbours[i] == null) {
                 neighbours[i] = node;
@@ -81,7 +81,12 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         throw new IllegalStateException("Too many children");
     }
 
-    void removeChild(RTreeNode node) {
+    public void removeChild(int index) {
+        neighbours[index] = null;
+        --numChildren;
+    }
+
+    public void removeChild(RTreeNode node) {
         for (int i = 0; i < 3; ++i) {
             if (neighbours[i].equals(node)) {
                 neighbours[i] = null;
@@ -95,7 +100,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     /**
      * Recomputes the dependent values
      */
-    void tighten() {
+    public void tighten() {
         // Copies the old ranges
         Range<Double>[] n_ranges = Arrays.copyOf(ranges, ranges.length);
 
@@ -147,7 +152,6 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
      * @param e - The element that may be inserted
      */
     double getAreaExpansion(T e) {
-        double area = getArea(this); // Original Area
         double expanded = 1.0f;           // New area
 
         double[] e_vals = e.getParamValues(); // Get the parametrized values
@@ -167,7 +171,36 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         }
 
         // Calculate Difference and return that
-        return expanded - area;
+        return expanded - getArea(this);
+    }
+
+
+    /**
+     * Returns increase in area to include given element
+     * @param e - The element that may be inserted
+     */
+    double getAreaExpansion( RTreeNode<T> e ) {
+        double expanded = 1.0;
+
+        if (e.ranges.length != ranges.length) throw new IllegalArgumentException("e的参数数不对");
+
+        for ( int i = 0; i < e.ranges.length; i++ ) {
+            double delta = 0.0; // Change in length
+            // Expand end point
+            if (this.ranges[i].getMax() < e.ranges[i].getMax())
+                delta += e.ranges[i].getMax() - this.getRanges()[i].getMax();
+
+            // Expand start point
+            if (this.ranges[i].getMin() > e.ranges[i].getMin())
+                delta += this.ranges[i].getMin() - e.ranges[i].getMin();
+
+            // Multiply to expanded running area
+            expanded *= delta + this.ranges[i].getMax() - this.ranges[i].getMin();
+        }
+
+        // Calculate Difference and return that
+        return expanded - getArea(this);
+
     }
 }
 
