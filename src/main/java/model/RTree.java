@@ -18,6 +18,9 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
 
     private final int maxEntries;
     private final int minEntries;
+
+    private final int maxChildren = 2;
+    private final int minChildren = 1;
     private final int numDims;
     private int size;
 
@@ -155,7 +158,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
                 orphans.addAll(n.getItem());
                 n.neighbours[3].neighbours[(int) (n.getId() % 2)] = null;
             }
-            else if (!n.isLeaf() && (n.getNumChildren() < 1)) {
+            else if (!n.isLeaf() && (n.getNumChildren() < minChildren)) {
                 n.neighbours[3].neighbours[(int) (n.getId() % 2)] = null;
             }
             else n.tighten();
@@ -188,7 +191,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         leaf.addEntries(entry);
 
         // It is time to die leaf, you are too fat
-        if ( leaf.neighbours.length > maxEntries ) {
+        if ( leaf.getItem().size() > maxEntries ) {
             RTreeNode<T>[] splits = splitRTreeNode(leaf);
             adjustTree(splits[0], splits[1]);
         }
@@ -212,7 +215,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         n.tighten();
         if ( nn != null ) {
             nn.tighten();
-            if ( n.neighbours[3].neighbours.length > maxEntries ) {
+            if ( ((RTreeNode<T>) n.neighbours[3]).getNumChildren() > maxChildren ) {
                 RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[2]);
                 adjustTree(splits[0], splits[1]);
             }
@@ -243,7 +246,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         LinkedList<T> cc = new LinkedList<>(n.getItem());
         n.getItem().clear();
 
-        n.neighbours = new RTreeNode[] {null, null, null}; // Clear the neighbours
+        n.neighbours = new RTreeNode[] {null, null, null, (RTreeNode<T>) n.neighbours[3]}; // Clear the neighbours
 
         // Select the first elements to add
         T[] ss = pickSeeds(cc);
@@ -251,8 +254,8 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         n_nodes[1].addEntries(ss[1]);
 
         while ( !cc.isEmpty() ) {
-            if ((n_nodes[0].neighbours.length >= minEntries) &&
-                (n_nodes[1].neighbours.length + cc.size() == minEntries)) {
+            if ((n_nodes[0].getNumChildren() >= minEntries) &&
+                (n_nodes[1].getNumChildren() + cc.size() == minEntries)) {
                 // Case 1: Dump everything into the right node to meet min
                 n_nodes[1].addEntries(cc.toArray((T[]) new Object[0]));
                 cc.clear();
