@@ -46,7 +46,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     public void addEntries(T... entries) {
         this.item.addAll(Arrays.asList(entries));
-        ++numEntries;
+        numEntries += entries.length;
     }
 
     static public boolean isOverlap(Range<Double>[] r1, Range<Double>[] r2 ) {
@@ -70,7 +70,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         return numChildren;
     }
 
-    void addChild(RTreeNode<T> node) {
+    public void addChild(RTreeNode<T> node) {
         for (int i = 0; i < 3; ++i) {
             if (neighbours[i] == null) {
                 neighbours[i] = node;
@@ -81,7 +81,12 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         throw new IllegalStateException("Too many children");
     }
 
-    void removeChild(RTreeNode node) {
+    public void removeChild(int index) {
+        neighbours[index] = null;
+        --numChildren;
+    }
+
+    public void removeChild(RTreeNode node) {
         for (int i = 0; i < 3; ++i) {
             if (neighbours[i].equals(node)) {
                 neighbours[i] = null;
@@ -95,7 +100,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     /**
      * Recomputes the dependent values
      */
-    void tighten() {
+    public void tighten() {
         // Copies the old ranges
         Range<Double>[] n_ranges = Arrays.copyOf(ranges, ranges.length);
 
