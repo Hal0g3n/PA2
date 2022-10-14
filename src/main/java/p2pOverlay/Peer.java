@@ -13,11 +13,16 @@ public class Peer {
     public BitSet id;
     public static ArrayList<Connection>[] routeTable;
 
+    // temp arraylist for testing
+    private final ArrayList<Connection> knownConnections;
+
+
     public Peer(BitSet id, ArrayList<Connection> clockwise, ArrayList<Connection> antiClockwise) {
         this.id = id;
         this.clockwise = clockwise;
         this.antiClockwise = antiClockwise;
         routeTable = new ArrayList[]{clockwise, antiClockwise};
+        this.knownConnections = new ArrayList<>();
     }
     public Peer(BitSet id) {
         this(id, new ArrayList<>(), new ArrayList<>());
@@ -41,4 +46,7 @@ public class Peer {
         antiClockwise.set(h, antiClockwiseNeighbour);
     }
 
+    public void addConnection(String ip, int port, BitSet peerID){
+        
+    }
 }
