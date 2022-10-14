@@ -42,7 +42,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         Range<Double>[] ranges = new Range[numDims];
 
         // Setting Largest Domain in each dimension
-        // sqrt(MAX_VALUE)
+        // ± sqrt(MAX_VALUE)
         for ( int i = 0; i < this.numDims; i++ )
             ranges[i] = new Range<Double> (
                 Math.sqrt(Double.MAX_VALUE),
@@ -66,11 +66,11 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         LinkedList<T> results = new LinkedList<T>();
-        search(ranges, root, results); // Actual Recursive function
+        search(root, ranges, results); // Actual Recursive function
         return results;
     }
 
-    private void search(Range<Double>[] ranges, RTreeNode<T> n, LinkedList<T> results) {
+    private void search(RTreeNode<T> n, Range<Double>[] ranges, LinkedList<T> results) {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
         if (n.isLeaf()) // If leaf, add the children
@@ -85,13 +85,13 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
                 if (!RTreeNode.isOverlap(ranges, ((RTreeNode<T>) n.neighbours[i]).getRanges())) continue;
 
                 // If leaf domain is overlapping
-                search(ranges, (RTreeNode<T>) n.neighbours[i], results);
+                search((RTreeNode<T>) n.neighbours[i], ranges, results);
             }
     }
 
     /**
      * Deletes the entry associated with the given rectangle from the model.RTree
-     *
+     * TODO: delete does not require ranges, fix that
      * @param ranges ranges of each axis to search in
      * @param entry the entry to delete
      * @return true if the entry was deleted from the model.RTree.
@@ -121,6 +121,22 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         return (toRemove != null);
     }
 
+
+    public boolean delete(Range<Double>[] ranges, GhostNode<T> entry) {
+        if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+
+        // TODO: implement properly
+        return false;
+    }
+
+
+    /**
+     *
+     * @param n
+     * @param ranges
+     * @param entry
+     * @return
+     */
     private RTreeNode<T> findLeaf(RTreeNode<T> n, Range<Double>[] ranges, T entry) {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
@@ -155,11 +171,11 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         while ( n != root ) {
             if ( n.isLeaf() && (n.getItem().size() < minEntries)) {
                 orphans.addAll(n.getItem());
-                ((RTreeNode<T>) n.neighbours[3]).removeChild((int) (n.getId() % 2));
+                ((RTreeNode<T>) n.neighbours[3]).removeChild(n.getId().get(n.getId().size() - 1) ? 1 : 0);
             }
             else if (!n.isLeaf() && (n.getNumChildren() < minChildren)) {
                 // This only works for our case where minChildren is 1
-                ((RTreeNode<T>) n.neighbours[3]).removeChild((int) (n.getId() % 2));
+                ((RTreeNode<T>) n.neighbours[3]).removeChild(n.getId().get(n.getId().size() - 1) ? 1 : 0);
             }
             else n.tighten();
 
@@ -197,6 +213,15 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         }
         // No splitting, just adjust the tree
         else adjustTree(leaf, null);
+    }
+
+    /**
+     * Inserting the ghost node
+     * Called to propagate changes from other branches
+     * TODO: actually finish this
+     */
+    public void insert(GhostNode<T> n_node) {
+
     }
 
     private void adjustTree(RTreeNode<T> n, RTreeNode<T> nn) {
@@ -260,23 +285,9 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         n_nodes[1].addChild(ss[1]);
 
         while ( !cc.isEmpty() ) {
-            if ((n_nodes[0].getItem().size() >= 1) &&
-                    (n_nodes[1].getItem().size() + cc.size() == 1)) {
-                // Case 1: Dump everything into the right node to meet min
-                n_nodes[1].addEntries(cc.toArray((T[]) new Object[0]));
-                cc.clear();
-                return n_nodes;
-            }
+            // This while loop is to make it nicer
+            // In actuality this is only run once due to constrains
 
-            else if ((n_nodes[1].getItem().size() >= 1) &&
-                    (n_nodes[0].getItem().size() + cc.size() == 1)) {
-                // Case 2: Dump everything into the left node to meet min
-                n_nodes[0].addEntries(cc.toArray((T[]) new Object[0]));
-                cc.clear();
-                return n_nodes;
-            }
-
-            // Case 3: Indeterminate, insert one by one
             RTreeNode<T> c = cc.pop();         // The entry to add
 
 
@@ -313,7 +324,6 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
 
         // And returns the new nodes
         return n_nodes;
-
     }
 
 

@@ -3,14 +3,13 @@ package model;
 import AVLs.ElementNotFoundException;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.BitSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     // data members
-    private long id;
+    private BitSet id;
     public Range<Double>[] ranges;
 
     private long numEntries;
@@ -42,7 +41,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         return ranges;
     }
 
-    public long getId() { return this.id;}
+    public BitSet getId() { return this.id; }
 
     public void addEntries(T... entries) {
         this.item.addAll(Arrays.asList(entries));
@@ -78,7 +77,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
                 return;
             }
         }
-        throw new IllegalStateException("Too many children");
+        throw new IllegalStateException("太多小孩了");
     }
 
     public void removeChild(int index) {
@@ -94,7 +93,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
                 return;
             }
         }
-        throw new ElementNotFoundException("No such child");
+        throw new ElementNotFoundException("找不到输入的小孩");
     }
 
     /**
