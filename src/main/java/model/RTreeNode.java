@@ -152,7 +152,6 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
      * @param e - The element that may be inserted
      */
     double getAreaExpansion(T e) {
-        double area = getArea(this); // Original Area
         double expanded = 1.0f;           // New area
 
         double[] e_vals = e.getParamValues(); // Get the parametrized values
@@ -172,7 +171,36 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         }
 
         // Calculate Difference and return that
-        return expanded - area;
+        return expanded - getArea(this);
+    }
+
+
+    /**
+     * Returns increase in area to include given element
+     * @param e - The element that may be inserted
+     */
+    double getAreaExpansion( RTreeNode<T> e ) {
+        double expanded = 1.0;
+
+        if (e.ranges.length != ranges.length) throw new IllegalArgumentException("e的参数数不对");
+
+        for ( int i = 0; i < e.ranges.length; i++ ) {
+            double delta = 0.0; // Change in length
+            // Expand end point
+            if (this.ranges[i].getMax() < e.ranges[i].getMax())
+                delta += e.ranges[i].getMax() - this.getRanges()[i].getMax();
+
+            // Expand start point
+            if (this.ranges[i].getMin() > e.ranges[i].getMin())
+                delta += this.ranges[i].getMin() - e.ranges[i].getMin();
+
+            // Multiply to expanded running area
+            expanded *= delta + this.ranges[i].getMax() - this.ranges[i].getMin();
+        }
+
+        // Calculate Difference and return that
+        return expanded - getArea(this);
+
     }
 }
 

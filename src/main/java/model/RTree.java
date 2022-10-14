@@ -1,7 +1,6 @@
 package model;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static model.RTreeNode.*;
 
@@ -226,6 +225,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         }
     }
 
+
     /**
      * Splits a node, returning 2 nodes, left and right.
      * ! The actual node itself is recycled as left node
@@ -234,12 +234,163 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
      * @param n The node to split
      */
     private RTreeNode<T>[] splitRTreeNode(RTreeNode<T> n) {
-        // TODO: This version only works for leaves
+        // If it is leaf, call the other function
+        if (n == null || n.isLeaf()) return splitRTreeLeaf(n);
+
+        // Generate the new nodes (Recycle the old node)
+        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<>(), n.getRanges(), false, (RTreeNode<T>) n.neighbours[2])};
+
+        // Add children to parent
+        if ( n_nodes[1].neighbours[3] != null ) ((RTreeNode<T>) n_nodes[1].neighbours[3]).addChild(n_nodes[1]);
+
+        // List of entries and clear n for reuse
+        LinkedList<RTreeNode<T>> cc = new LinkedList<>();
+        for (int i = 0; i < 3; ++i) {
+            // Non-existent
+            if (n.neighbours[i] == null) continue;
+            cc.add((RTreeNode<T>) n.neighbours[i]);
+            n.removeChild(i);
+        }
+
+        n.neighbours = new RTreeNode[] {null, null, null, (RTreeNode<T>) n.neighbours[3]}; // Clear the neighbours
+
+        // Select the first elements to add
+        RTreeNode<T>[] ss = pickNodeSeeds(cc);
+        n_nodes[0].addChild(ss[0]);
+        n_nodes[1].addChild(ss[1]);
+
+        while ( !cc.isEmpty() ) {
+            if ((n_nodes[0].getItem().size() >= 1) &&
+                    (n_nodes[1].getItem().size() + cc.size() == 1)) {
+                // Case 1: Dump everything into the right node to meet min
+                n_nodes[1].addEntries(cc.toArray((T[]) new Object[0]));
+                cc.clear();
+                return n_nodes;
+            }
+
+            else if ((n_nodes[1].getItem().size() >= 1) &&
+                    (n_nodes[0].getItem().size() + cc.size() == 1)) {
+                // Case 2: Dump everything into the left node to meet min
+                n_nodes[0].addEntries(cc.toArray((T[]) new Object[0]));
+                cc.clear();
+                return n_nodes;
+            }
+
+            // Case 3: Indeterminate, insert one by one
+            RTreeNode<T> c = cc.pop();         // The entry to add
+
+
+            // Factor 1: Select node with smaller expansion //
+            // Get expansion of area to insert c
+            double e0 = n_nodes[0].getAreaExpansion(c);
+            double e1 = n_nodes[1].getAreaExpansion(c);
+            // If factor differentiates, insert and move on
+            if (e0 != e1) {
+                n_nodes[e0 < e1 ? 0 : 1].addChild(c);
+                continue;
+            }
+
+
+            // Factor 2: Select smaller node //
+            double a0 = getArea(n_nodes[0]); // Calculates the Initial Area
+            double a1 = getArea(n_nodes[1]); // Calculates the Initial Area
+            // If factor differentiates, insert and move on
+            if (a0 != a1) {
+                n_nodes[a0 < a1 ? 0 : 1].addChild(c);
+                continue;
+            }
+
+
+            // Factor 3: Decide on number of entries //
+            if (n_nodes[0].getItem().size() < n_nodes[1].getItem().size())
+                n_nodes[0].addChild(c);
+            else n_nodes[1].addChild(c);
+        }
+
+        // Restrict their ranges
+        n_nodes[0].tighten();
+        n_nodes[1].tighten();
+
+        // And returns the new nodes
+        return n_nodes;
+
+    }
+
+
+    /**
+     * Selects the 2 entries acting as the splitting pair
+     * One goes in left and the other goes in right
+     * Everything else will is only better in one than the other
+     *
+     * The picked entries are ejected from the list passed in
+     *
+     * @param children - The list of entries to split
+     */
+    private RTreeNode<T>[] pickNodeSeeds(LinkedList<RTreeNode<T>> children) {
+        // keeps track of the best separation between the center 2 nodes
+        double bestSep = 0.0f;
+
+        // The best pair of children to split by
+        RTreeNode<T>[] bestPair = null;
+        for ( int dim = 0; dim < numDims; dim++ ) {
+
+            // Many variables to keep track of range of min and max in the dimension
+            double dimLb = Double.MAX_VALUE, dimMinUb = Double.MAX_VALUE;
+            double dimUb = -1.0f * Double.MAX_VALUE, dimMaxLb = -1.0f * Double.MAX_VALUE;
+
+            // Keeps track of children with largest Min and smallest Max
+            RTreeNode<T> nMaxLb = null, nMinUb = null;
+
+            // For each entry
+            for (RTreeNode<T> e : children) {
+
+                // Comparing and updating the min max, etc.
+                if ( e.getRanges()[dim].getMin() < dimLb ) dimLb = e.getRanges()[dim].getMin(); // The minimum
+                if ( e.getRanges()[dim].getMax() > dimUb ) dimUb = e.getRanges()[dim].getMax(); // The maximum
+
+                // The Largest lower bound
+                if ( e.getRanges()[dim].getMin() > dimMaxLb ) {
+                    dimMaxLb = e.getRanges()[dim].getMin();
+                    nMaxLb = e;
+                }
+
+                // The lowest upper bound
+                if ( e.getRanges()[dim].getMax() < dimMinUb ) {
+                    dimMinUb = e.getRanges()[dim].getMax();
+                    nMinUb = e;
+                }
+            }
+
+            // Calculate the pairs separation value
+            double sep = Math.abs((dimMinUb - dimMaxLb) / (dimUb - dimLb));
+
+            // Check if this split the array "more"
+            if ( sep >= bestSep ) {
+                // Maximises the split and replaces the smaller one
+                bestPair = (RTreeNode<T>[]) new Object[]{ nMaxLb, nMinUb };
+                bestSep = sep;
+            }
+        }
+
+        // Removes from list and returns the picked Seeds
+        children.remove(bestPair[0]);
+        children.remove(bestPair[1]);
+        return bestPair;
+    }
+
+    /**
+     * Splits a leaf, returning 2 nodes, left and right leaves
+     * ! The actual node itself is recycled as left node
+     *
+     * ! Does not randomise insertion into nodes, but factors are enough to make this fast
+     * @param n The node to split
+     */
+    private RTreeNode<T>[] splitRTreeLeaf(RTreeNode<T> n) {
         // Java was scream so here, to appease you
         if (n == null) return null;
 
         // Generate the new nodes (Recycle the old node)
-        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<>(), n.getRanges(), n.isLeaf(), (RTreeNode<T>) n.neighbours[2])};
+        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<>(), n.getRanges(), true, (RTreeNode<T>) n.neighbours[2])};
 
         // Add children to parent
         if ( n_nodes[1].neighbours[3] != null ) ((RTreeNode<T>) n_nodes[1].neighbours[3]).addChild(n_nodes[1]);
@@ -251,7 +402,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         n.neighbours = new RTreeNode[] {null, null, null, (RTreeNode<T>) n.neighbours[3]}; // Clear the neighbours
 
         // Select the first elements to add
-        T[] ss = pickSeeds(cc);
+        T[] ss = pickLeafSeeds(cc);
         n_nodes[0].addEntries(ss[0]);
         n_nodes[1].addEntries(ss[1]);
 
@@ -320,7 +471,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
      *
      * @param entries - The list of entries to split
      */
-    private T[] pickSeeds(LinkedList<T> entries) {
+    private T[] pickLeafSeeds(LinkedList<T> entries) {
         // Collect the Param stuff
         double[][] elements = (double[][]) entries.stream().map(RTreeEntry::getParamValues).toArray();
         T[] arr_entries = (T[]) entries.toArray(); // And also make each entry more accessible
