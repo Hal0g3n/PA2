@@ -156,10 +156,11 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         while ( n != root ) {
             if ( n.isLeaf() && (n.getItem().size() < minEntries)) {
                 orphans.addAll(n.getItem());
-                n.neighbours[3].neighbours[(int) (n.getId() % 2)] = null;
+                ((RTreeNode<T>) n.neighbours[3]).removeChild((int) (n.getId() % 2));
             }
             else if (!n.isLeaf() && (n.getNumChildren() < minChildren)) {
-                n.neighbours[3].neighbours[(int) (n.getId() % 2)] = null;
+                // This only works for our case where minChildren is 1
+                ((RTreeNode<T>) n.neighbours[3]).removeChild((int) (n.getId() % 2));
             }
             else n.tighten();
 
@@ -233,6 +234,7 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
      * @param n The node to split
      */
     private RTreeNode<T>[] splitRTreeNode(RTreeNode<T> n) {
+        // TODO: This version only works for leaves
         // Java was scream so here, to appease you
         if (n == null) return null;
 
@@ -254,16 +256,16 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         n_nodes[1].addEntries(ss[1]);
 
         while ( !cc.isEmpty() ) {
-            if ((n_nodes[0].getNumChildren() >= minEntries) &&
-                (n_nodes[1].getNumChildren() + cc.size() == minEntries)) {
+            if ((n_nodes[0].getItem().size() >= minEntries) &&
+                (n_nodes[1].getItem().size() + cc.size() == minEntries)) {
                 // Case 1: Dump everything into the right node to meet min
                 n_nodes[1].addEntries(cc.toArray((T[]) new Object[0]));
                 cc.clear();
                 return n_nodes;
             }
 
-            else if ((n_nodes[1].neighbours.length >= minEntries) &&
-                     (n_nodes[1].neighbours.length + cc.size() == minEntries)) {
+            else if ((n_nodes[1].getItem().size() >= minEntries) &&
+                     (n_nodes[0].getItem().size() + cc.size() == minEntries)) {
                 // Case 2: Dump everything into the left node to meet min
                 n_nodes[0].addEntries(cc.toArray((T[]) new Object[0]));
                 cc.clear();
