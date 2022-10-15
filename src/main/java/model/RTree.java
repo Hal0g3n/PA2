@@ -21,7 +21,6 @@ public class RTree<T extends RTreeEntry> {
     private final int maxChildren = 2;
     private final int minChildren = 1;
     private final int numDims;
-    private int size;
 
     private RTreeNode<T> root;
 
@@ -108,19 +107,23 @@ public class RTree<T extends RTreeEntry> {
     public boolean delete(Range<Double>[] ranges, T entry) {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        RTreeNode<T> l = findLeaf(root, entry.getParamValues(), entry);
-        if (l == null) throw new IllegalStateException("找不到树叶");
-        if (!l.isLeaf()) throw new IllegalStateException("找到的不是树叶");
+        RTreeNode<T> leaf = findLeaf(root, entry.getParamValues(), entry);
 
-        for (T e : l.getItem()) {
+        // Some checks
+        if (leaf == null) throw new IllegalStateException("找不到树叶");
+        if (!leaf.isLeaf()) throw new IllegalStateException("找到的不是树叶");
+
+        for (T e : leaf.getItem()) {
+            // Reject if not entry
             if ( !e.equals(entry) ) continue;
 
-            l.getItem().remove(e);
-            condenseTree(l);
-            size--;
+            // Entry found, kill it now
+            leaf.getItem().remove(e);
+            condenseTree(leaf); // Try to reduce tree size
             return true;
         }
 
+        // Deletion failed
         return false;
     }
 
@@ -134,11 +137,10 @@ public class RTree<T extends RTreeEntry> {
 
 
     /**
-     *
-     * @param n
-     * @param params
-     * @param entry
-     * @return
+     * Searches for the leaf containing the entry
+     * @param n - The root of subtree to find leaf in
+     * @param params - The param values of entry (precomputed to prevent wasting time)
+     * @param entry - The entry to find
      */
     private RTreeNode<T> findLeaf(RTreeNode<T> n, Double[] params, T entry) {
         if (params.length != n.getRanges().length) throw new IllegalArgumentException("输入的数组大小不对");
@@ -211,6 +213,7 @@ public class RTree<T extends RTreeEntry> {
     public void insert(T entry) {
         if (entry.getParamValues().length != numDims) throw new IllegalArgumentException("输入的大小不对");
 
+        // Choose leaf, and add entry to it
         RTreeNode<T> leaf = chooseLeaf(root, entry);
         leaf.addEntries(entry);
 
@@ -230,6 +233,47 @@ public class RTree<T extends RTreeEntry> {
      */
     public void insert(GhostNode<T> n_node) {
 
+    }
+
+
+    /**
+     * Selects the best leaf to insert the given entry
+     * @param n - The root to find the leaf in
+     * @param entry - The entry to insert
+     */
+    private RTreeNode<T> chooseLeaf(RTreeNode<T> n, T entry) {
+        // Well it is the leaf
+        if ( n.isLeaf() ) return n;
+
+        // Keeps the minimum increment in area
+        double minInc = Double.MAX_VALUE;
+
+        // Keeps track of the node fit to hold entry
+        RTreeNode<T> next = null;
+        double bestArea = Double.MAX_VALUE; // To tiebreak by area
+
+        // For each child
+        for ( int k = 0; k < 2; ++k ) {
+            if (n.neighbours[k] == null) continue; // Child does not exist
+
+            RTreeNode<T> child = (RTreeNode<T>) n.neighbours[k];
+
+            // Calculate the area expansion
+            double inc = child.getAreaExpansion( entry );
+            double area = getArea(child);
+
+            // Not the best node if area expands more or expansion same but larger area
+            if (inc > minInc || (inc == minInc && area >= bestArea)) continue;
+
+            // Set the new running best node to explore
+            next = child;
+            minInc = inc;
+            bestArea = area;
+        }
+
+        // Explore down into the child
+        if (next == null) throw new IllegalStateException("没有适合的孩子");
+        return chooseLeaf(next, entry);
     }
 
     private void adjustTree(RTreeNode<T> n, RTreeNode<T> nn) {
@@ -558,34 +602,6 @@ public class RTree<T extends RTreeEntry> {
         entries.remove(bestPair.get(0));
         entries.remove(bestPair.get(1));
         return bestPair;
-    }
-
-    private RTreeNode<T> chooseLeaf(RTreeNode<T> n, T e) {
-        // Well it is the leaf
-        if ( n.isLeaf() ) return n;
-
-        double minInc = Double.MAX_VALUE;
-        RTreeNode<T> next = null;
-        for ( int k = 0; k < maxChildren; ++k ) {
-            RTreeNode<T> c = (RTreeNode<T>) n.neighbours[k];
-            double inc = c.getAreaExpansion( e );
-            if ( inc < minInc ) {
-                minInc = inc;
-                next = c;
-            }
-            else if ( inc == minInc ) {
-                double curArea = 1.0f;
-                double thisArea = 1.0f;
-                for ( int i = 0; i < c.getRanges().length; i++ ) {
-                    assert next != null;
-                    curArea *= next.getRanges()[i].getMax() - next.getRanges()[i].getMin();
-                    thisArea *= c.getRanges()[i].getMax() - c.getRanges()[i].getMin();
-                }
-                if ( thisArea < curArea ) next = c;
-            }
-        }
-        assert next != null;
-        return chooseLeaf(next, e);
     }
 
     public void clear() { root = buildRoot(true); } // Garbage Collector will clear the rest
