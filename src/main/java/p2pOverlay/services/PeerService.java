@@ -2,40 +2,54 @@ package p2pOverlay.services;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import kotlin.text.Charsets;
 import p2pOverlay.Peer;
-import p2pOverlay.util.Connection;
+import p2pOverlay.model.RouteMessage;
 import p2pOverlay.util.Encoding;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class PeerService {
 
     /*
-    * This should store the Peer object?
-    * The Peer itself will contain information about the connections it should have
-    * This will help Peer interface with the ConnectionService through a ConnectionHandler
-    *
-    * */
+     * This should store the Peer object?
+     * The Peer itself will contain information about the connections it should have
+     * This will help Peer interface with the ConnectionService through a ConnectionHandler
+     *
+     * */
+
+    private final static int NUMERIC_ID_LEN = 5; // no more than 32 peers in the demo
+
+    private HashMap<Integer, Boolean> usedId;
 
     private Peer head;
     private ConnectionService connectionService;
     private int port;
 
+
+    private int peerNumberCounter;
+
+
+
     private ArrayList<Integer> tempCounter;
 
-    // TODO: Finish constructor, doing routing first
+
     public PeerService(int port) {
         this.head = new Peer();
         this.port = port;
+
+        if (this.port == 8080) {
+            // this is the gateway node, and will always be the first one in the network
+            // this is for simulation purposes, after all
+
+        }
+        this.peerNumberCounter = 0;
+        this.usedId = new HashMap<>();
         this.tempCounter = new ArrayList<>();
     }
 
-    // TODO: routing, join, leave
-    // Assumes both strings are of equal length
+
+    // this function is for peerID, not numericID
     public static int commonPrefixLen(BitSet a, BitSet b) {
         int maxLength = Math.max(a.length(), b.length());
 
@@ -45,21 +59,7 @@ public class PeerService {
         return a.length();
     }
 
-//    public Peer findPeer(String peerId) {
-//        return findPeer(head, peerId);
-//    }
-
-//    public Peer findPeer(Peer source, String destinationId) {
-//        if (Objects.equals(source.id, destinationId)) return source;
-//
-//        //int ringLevel = commonPrefixLen(source.id, destinationId); fix later
-//        int ringLevel = 0;
-//        return findPeer(source.routeTable[0].get(ringLevel).peer, destinationId);
-//    }
-
-    // Connection object is not supposed to contain a peer object, only the peerID and address
-
-    public void startService(){
+    public void startService() {
         try {
             this.connectionService = new ConnectionService(this, port);
             System.out.println("in main, called");
@@ -69,56 +69,99 @@ public class PeerService {
         }
     }
 
-    public void register(){
-        // TODO: make this less jank
+    public void register() {
+
+        // in this case, it is more convenient to just send a registration to 8080
+        // however, it SHOULD be able to be sent to any other port
+        // because we are only sending registration commands to localhost,
+        //                  we will just maintain a counter for peerNumber
+
+        // this is extremely cursed, but will make do for now
         connectionService.sendMessage("register " + port, "127.0.01", 8080);
     }
 
-    public void sendMsg(int targetId, String message){
+    public void insertNode(int numericId){
+
+
+    }
+
+    private void routeByNumericID(RouteMessage msg){
+        if(head.getNumericID() == msg.getDestId()){
+
+            // if you have the correct numericId, then you should get the message
+            // the message should be arbitrary
+            return;
+        }
+
+        if(head.getNumericID() == msg.getSourceNode().numericID()){
+            // we have finished this ring, so we go to the next ring
+
+        }
+
+    }
+
+
+    public void sendMsg(int targetId, String message) {
         // ok so basically right now we only relay messages to the gateway
         // but in the future, each peer would also store some connections which it knows the peerId of
         // and it that case, it fills in the port of that peerId as opposed to gateway
 
-        // TODO: pull ip and port from peer pointer table when the time comes
         System.out.println("Attempting ping");
         sendMsg(head.getLongId(), targetId, message, "127.0.0.1", 8080);
     }
 
-    private void sendMsg(long sourceId, int targetId, String message, String ip, int port){
+    private void sendMsg(long sourceId, int targetId, String message, String ip, int port) {
         connectionService.sendMessage(String.format("ping %d %d %d %s", sourceId, head.getLongId(), targetId, message), ip, port);
     }
 
-    // temporary measure while i think of how to better do this
-    private Queue<ChannelHandlerContext> ctx_queue = new LinkedList<>();
+    public void handleMessage(ChannelHandlerContext ctx, String msg) {
 
-    public void handleMessage(ChannelHandlerContext ctx, String msg){
+
         System.out.printf("Handling message %s from %s\n", msg, ctx.channel().remoteAddress());
 
         String[] tokens = msg.split(" ");
         String command = tokens[0];
         System.out.println(Arrays.toString(tokens));
         switch (command) {
+
             case "register" -> {
                 // incoming registration, thus i am the gateway
-                head.setId(0);
-                System.out.print("Input peerID to supply to incoming connection: ");
-                final BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
-                BitSet giveID;
-                try {
-                    giveID = stringToBitSet(userInput.readLine());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                head.setPeerID(0);
+
+                // we need to give the peer its peerNumber and numericID
+                peerNumberCounter++;
+                int numID = ThreadLocalRandom.current().nextInt(0, 2 << NUMERIC_ID_LEN + 1);
+                while(usedId.containsKey(numID)) numID = ThreadLocalRandom.current().nextInt(0, 2 << NUMERIC_ID_LEN + 1);
+                usedId.put(numID, true);
+
+                
 
                 tempCounter.add(Integer.parseInt(tokens[1]));
-                String demoResponse = "approved " + bitSetToString(giveID);
-                ByteBuf out = ctx.alloc().buffer(demoResponse.length() * 2);
-                out.writeBytes(Encoding.str_to_bb(demoResponse));
+
+
+
+                // TODO: Convert these to message object
+
+                String response = "assignedNum " + peerNumberCounter;
+                ByteBuf out = ctx.alloc().buffer(response.length() * 2);
+                out.writeBytes(Encoding.str_to_bb(response));
                 ctx.writeAndFlush(out);
                 ctx.close(); // seems like CTX is blocking...
             }
+
+            case "assignedNum" -> {
+
+                // I received a numericID from the gateway
+                head.setPeerNumber(Integer.parseInt(tokens[1])); // set numericID based on gateway response
+                // now that I have a numericID, I need to insert myself into the skipgraph
+
+                // in this case, once again since deletions will begin with the gateway
+                //          it will simplify the process to an extent, just a bit.
+            }
+
+
             case "approved" -> {
-                head.setId(Integer.parseInt(tokens[1])); // set peerID based on gateway response
+
                 System.out.println("Approved by gateway! Given ID " + tokens[1]);
             }
             case "ping" -> { // ping sourceID fromID targetID msg
@@ -128,7 +171,7 @@ public class PeerService {
                 int targetID = Integer.parseInt(tokens[3]);
                 String pingMsg = tokens[4];
 
-                if(head.getLongId() == targetID){
+                if (head.getLongId() == targetID) {
                     // we now initiate a pong back
                     // pong sourceID fromID targetID msg
                     String demoResponse = String.format(
@@ -138,8 +181,7 @@ public class PeerService {
                     out.writeBytes(Encoding.str_to_bb(demoResponse));
                     ctx.writeAndFlush(out);
                     ctx.close();
-                }
-                else {
+                } else {
                     // i am an intermediate
                     // program logic is supposed to determine the next peer to send to
                     // for now, we only check if we have the peer to send to, which should be true for the gateway
@@ -156,17 +198,17 @@ public class PeerService {
                 int targetID = Integer.parseInt(tokens[3]);
                 String pongMsg = tokens[4];
 
-                if(head.getLongId() == targetID){ // i am the one who pong'd
+                if (head.getLongId() == targetID) { // i am the one who pong'd
                     System.out.printf("Received a pong from %d! msg : %s\n", sourceID, pongMsg);
                 } else { // keep passing on the pong
                     // again, there should be program logic for this
                     // for now, we just pull the port from tempCounter
 
                     connectionService.sendMessage(String.format(
-                            "pong %d %d %d %s",
-                            sourceID, head.getLongId(), targetID, pongMsg),
+                                    "pong %d %d %d %s",
+                                    sourceID, head.getLongId(), targetID, pongMsg),
                             "127.0.0.1", tempCounter.get(0));
-                            // we know we have to pong back to peer 1
+                    // we know we have to pong back to peer 1
 
                 }
             }
@@ -174,36 +216,4 @@ public class PeerService {
 
     }
 
-
-    public static BitSet stringToBitSet(String id) {
-        if (id.matches("[0-1]+")) {
-            BitSet bitSet = new BitSet(id.length());
-            for (int i = 0; i < id.length(); i++) {
-                if (id.charAt(i) == '1') bitSet.set(i);
-            }
-
-            return bitSet;
-        }
-        else throw new IllegalArgumentException("ID must be a binary string");
-    }
-    public static String bitSetToString(BitSet id) {
-        StringBuilder string = new StringBuilder();
-        for (int i = 0; i < id.length(); i++) {
-            string.append(id.get(i) ? '1' : '0');
-        }
-
-        return string.toString();
-    }
-
-    // Just testing bitset properties
-//    public static void main(String[] args) {
-//        BitSet bitSet = BitSet.valueOf(new long[] {11});
-//        BitSet bitSet1 = BitSet.valueOf(new long[] {10});
-//
-//        for (int i = 0; i < bitSet.length(); i++) {
-//            System.out.println(bitSet.get(i));
-//        }
-//
-//        System.out.println(commonPrefixLen(bitSet, bitSet1));
-//    }
 }

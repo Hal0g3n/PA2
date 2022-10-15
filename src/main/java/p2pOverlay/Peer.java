@@ -1,9 +1,9 @@
 package p2pOverlay;
 
 import p2pOverlay.services.PeerService;
-import p2pOverlay.util.Connection;
+import p2pOverlay.model.Connection;
+import p2pOverlay.util.Encoding;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.BitSet;
 
@@ -12,58 +12,73 @@ public class Peer {
     // The index of the arraylist corresponds to the level
     private final ArrayList<Connection> clockwise;
     private final ArrayList<Connection> antiClockwise;
-    public BitSet id;
+    private BitSet peerID;
     private static final int NBITS = 32;
     public static ArrayList<Connection>[] routeTable;
+    private int peerNumber;
+
+    private BitSet numericID;
 
     // temp arraylist for testing
     private final ArrayList<Connection> knownConnections;
+    private ArrayList<Integer> loadWavelet;
 
-
-    public Peer(BitSet id, ArrayList<Connection> clockwise, ArrayList<Connection> antiClockwise) {
-        this.id = id;
+    public Peer(BitSet peerID, ArrayList<Connection> clockwise, ArrayList<Connection> antiClockwise) {
+        this.peerID = peerID;
         this.clockwise = clockwise;
         this.antiClockwise = antiClockwise;
+
         routeTable = new ArrayList[]{clockwise, antiClockwise};
+
+        // routeTable[ 0 (clockwise) / 1 (anticlockwise) ][ringLvl]
+
         this.knownConnections = new ArrayList<>();
     }
-    public Peer(BitSet id) {
-        this(id, new ArrayList<>(), new ArrayList<>());
+    public Peer(BitSet peerID) {
+        this(peerID, new ArrayList<>(), new ArrayList<>());
     }
-    public Peer (String id) {
-        this(PeerService.stringToBitSet(id));
+    public Peer (String peerID) {
+        this(Encoding.stringToBitSet(peerID));
     }
 
     public Peer(){ this(new BitSet(NBITS)); }
 
     public long getLongId() {
-        long[] longArray = id.toLongArray();
+        long[] longArray = peerID.toLongArray();
 
         // if id is set to 0, longArray will have no elements
         if(longArray.length > 0) return longArray[0];
         return 0;
     }
 
+    public void setPeerNumber(int n){this.peerNumber = n;}
+    public int getPeerNumber(){ return peerNumber; }
 
-    public void setId(int id){this.id = BitSet.valueOf(new long[] {id});}
-    public void setId(String id) {
-        this.id = PeerService.stringToBitSet(id);
+    public Connection getAnticlockwiseNeighbour(int ringLvl){
+        return routeTable[1].get(ringLvl);
     }
 
-    // TODO: check if ring level exists
+    public Connection getClockwiseNeighbour(int ringLvl){
+        return routeTable[0].get(ringLvl);
+    }
+
+    public void setPeerID(int peerID){this.peerID = BitSet.valueOf(new long[] {peerID});}
+    public void setId(String id) {
+        this.peerID = Encoding.stringToBitSet(id);
+    }
+
     public void updateTable(int h, Connection clockwiseNeighbour, Connection antiClockwiseNeighbour) {
         clockwise.set(h, clockwiseNeighbour);
         antiClockwise.set(h, antiClockwiseNeighbour);
     }
 
-    public void addConnection(String ip, int port, BitSet peerID){
-       knownConnections.add(new Connection(peerID, new InetSocketAddress(ip, port)));
+
+    public BitSet getNumericID() {
+        return numericID;
     }
 
-    public Connection getConnection(BitSet peerID){
-        for(Connection c : knownConnections){
-            if(c.peerID().equals(peerID)) return c;
-        }
-        return null;
+    public void setNumericID(BitSet numericID) {
+        this.numericID = numericID;
     }
+
 }
