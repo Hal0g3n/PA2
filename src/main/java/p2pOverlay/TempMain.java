@@ -13,7 +13,6 @@ public class TempMain {
 
     public static void main(String[] args){
 
-
         String line;
         final BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
         int PORT_NUMBER = 0;
@@ -47,7 +46,7 @@ public class TempMain {
             }
         } else {
             System.out.print("GATEWAY NODE commands:\n" +
-                    "1. on receive 'register', type in the peerId");
+                    "1. on receive 'register', type in the peerId ");
         }
     }
 

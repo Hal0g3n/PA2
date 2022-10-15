@@ -103,15 +103,15 @@ public class PeerService {
                 head.setId(0);
                 System.out.print("Input peerID to supply to incoming connection: ");
                 final BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
-                int giveID;
+                BitSet giveID;
                 try {
-                    giveID = Integer.parseInt(userInput.readLine());
+                    giveID = stringToBitSet(userInput.readLine());
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
 
                 tempCounter.add(Integer.parseInt(tokens[1]));
-                String demoResponse = "approved " + giveID;
+                String demoResponse = "approved " + bitSetToString(giveID);
                 ByteBuf out = ctx.alloc().buffer(demoResponse.length() * 2);
                 out.writeBytes(Encoding.str_to_bb(demoResponse));
                 ctx.writeAndFlush(out);
@@ -174,10 +174,35 @@ public class PeerService {
 
     }
 
-    // Testing bitset
+
+    public static BitSet stringToBitSet(String id) {
+        if (id.matches("[0-1]+")) {
+            BitSet bitSet = new BitSet(id.length());
+            for (int i = 0; i < id.length(); i++) {
+                if (id.charAt(i) == '1') bitSet.set(i);
+            }
+
+            return bitSet;
+        }
+        else throw new IllegalArgumentException("ID must be a binary string");
+    }
+    public static String bitSetToString(BitSet id) {
+        StringBuilder string = new StringBuilder();
+        for (int i = 0; i < id.length(); i++) {
+            string.append(id.get(i) ? '1' : '0');
+        }
+
+        return string.toString();
+    }
+
+    // Just testing bitset properties
 //    public static void main(String[] args) {
 //        BitSet bitSet = BitSet.valueOf(new long[] {11});
 //        BitSet bitSet1 = BitSet.valueOf(new long[] {10});
+//
+//        for (int i = 0; i < bitSet.length(); i++) {
+//            System.out.println(bitSet.get(i));
+//        }
 //
 //        System.out.println(commonPrefixLen(bitSet, bitSet1));
 //    }
