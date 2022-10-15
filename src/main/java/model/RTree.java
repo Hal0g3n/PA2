@@ -43,12 +43,12 @@ public class RTree<T extends RTreeEntry> {
         // Setting Largest Domain in each dimension
         // ± sqrt(MAX_VALUE)
         for ( int i = 0; i < this.numDims; i++ )
-            ranges[i] = new Range<Double> (
+            ranges[i] = new Range<>(
                 Math.sqrt(Double.MAX_VALUE),
                 -2.0f * Math.sqrt(Double.MAX_VALUE)
             );
 
-        return new RTreeNode<T>(new ArrayList<T>(), ranges, asLeaf, null);
+        return new RTreeNode<>(new ArrayList<>(), ranges, asLeaf, null);
     }
 
     /**
@@ -73,7 +73,7 @@ public class RTree<T extends RTreeEntry> {
     public List<T> search(Range<Double>[] ranges) {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        LinkedList<T> results = new LinkedList<T>();
+        LinkedList<T> results = new LinkedList<>();
         search(root, ranges, results); // Actual Recursive function
         return results;
     }
@@ -176,7 +176,7 @@ public class RTree<T extends RTreeEntry> {
      */
 
     private void condenseTree(RTreeNode<T> n) {
-        Set<T> orphans = new HashSet<>();
+        Set<T> orphans = new HashSet<>(); // Does this need to be a set?
 
         while ( n != root ) {
             if ( n.isLeaf() && (n.getItem().size() < minEntries)) {
@@ -185,6 +185,7 @@ public class RTree<T extends RTreeEntry> {
             }
             else if (!n.isLeaf() && (n.getNumChildren() < minChildren)) {
                 // This only works for our case where minChildren is 1
+                // Since the node would have 0 children when it has below minChildren amount of children
                 ((RTreeNode<T>) n.neighbours[3]).removeChild(n.getId().get(n.getId().size() - 1) ? 1 : 0);
             }
             else n.tighten();
@@ -215,7 +216,7 @@ public class RTree<T extends RTreeEntry> {
 
         // Choose leaf, and add entry to it
         RTreeNode<T> leaf = chooseLeaf(root, entry);
-        leaf.addEntries(entry);
+        leaf.addEntry(entry);
 
         // It is time to die leaf, you are too fat
         if ( leaf.getItem().size() > maxEntries ) {
@@ -276,29 +277,42 @@ public class RTree<T extends RTreeEntry> {
         return chooseLeaf(next, entry);
     }
 
-    private void adjustTree(RTreeNode<T> n, RTreeNode<T> nn) {
-        if ( n == root ) {
-            if ( nn != null ) {
+    private void adjustTree(RTreeNode<T> node, RTreeNode<T> sibling) {
+        if ( node == root ) {
+            // There is a sibling to the root? this means node is not the root
+            // We need to create a new root!
+            if ( sibling != null ) {
                 // build new root and add children.
                 root = buildRoot(false);
-                root.addChild(n);
-                n.neighbours[3] = root;
-                root.addChild(nn);
-                nn.neighbours[3] = root;
+
+                root.addChild(node);
+                root.addChild(sibling);
+
+                // Register new root as parent
+                node.neighbours[3] = root;
+                sibling.neighbours[3] = root;
             }
+
+            // Update the root domain
             root.tighten();
             return;
         }
-        n.tighten();
-        if ( nn != null ) {
-            nn.tighten();
-            if ( ((RTreeNode<T>) n.neighbours[3]).getNumChildren() > maxChildren ) {
-                RTreeNode<T>[] splits = splitNode((RTreeNode<T>) n.neighbours[3]);
+
+        // Node is not root
+        node.tighten();
+        if ( sibling != null ) { // New Sibling exists
+            sibling.tighten();
+
+            // Check if splitting is required
+            if ( ((RTreeNode<T>) node.neighbours[3]).getNumChildren() > maxChildren ) {
+                RTreeNode<T>[] splits = splitNode((RTreeNode<T>) node.neighbours[3]);
                 adjustTree(splits[0], splits[1]);
             }
         }
-        else if ( n.neighbours[3] != null ) {
-            adjustTree((RTreeNode<T>) n.neighbours[3], null);
+        // Actually is this necessary?? If there is no new node, why recurse up?
+        // @PC
+        else if ( node.neighbours[3] != null ) { // node has parent
+            adjustTree((RTreeNode<T>) node.neighbours[3], null);
         }
     }
 
@@ -320,7 +334,7 @@ public class RTree<T extends RTreeEntry> {
         for (int i = 0; i < numDims; ++i) {
             newRanges[i] = new Range<>(n.getRanges()[i].getMin(), n.getRanges()[i].getMax());
         }
-        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<>(), newRanges, false, (RTreeNode<T>) n.neighbours[3])};
+        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<>(new LinkedList<>(), newRanges, false, (RTreeNode<T>) n.neighbours[3])};
 
         // Add children to parent
         if ( n_nodes[1].neighbours[3] != null ) ((RTreeNode<T>) n_nodes[1].neighbours[3]).addChild(n_nodes[1]);
@@ -341,6 +355,7 @@ public class RTree<T extends RTreeEntry> {
         n_nodes[0].addChild(ss.get(0));
         n_nodes[1].addChild(ss.get(1));
 
+        // While there are still stuff to add
         while ( !cc.isEmpty() ) {
             // This while loop is to make it nicer
             // In actuality this is only run once due to constrains
@@ -400,7 +415,8 @@ public class RTree<T extends RTreeEntry> {
         // The best pair of children to split by
         ArrayList<RTreeNode<T>> bestPair = new ArrayList<>(2);
         bestPair.add(null); bestPair.add(null); // this is an array but java dont like a real array
-        for ( int dim = 0; dim < numDims; dim++ ) {
+
+        for ( int dim = 0; dim < numDims; dim++ ) { // For each dimension
 
             // Many variables to keep track of range of min and max in the dimension
             double dimLb = Double.MAX_VALUE, dimMinUb = Double.MAX_VALUE;
@@ -409,7 +425,7 @@ public class RTree<T extends RTreeEntry> {
             // Keeps track of children with largest Min and smallest Max
             RTreeNode<T> nMaxLb = null, nMinUb = null;
 
-            // For each entry
+            // For each child
             for (RTreeNode<T> e : children) {
 
                 // Comparing and updating the min max, etc.
@@ -464,7 +480,7 @@ public class RTree<T extends RTreeEntry> {
         for (int i = 0; i < numDims; ++i) {
             newRanges[i] = new Range<>(n.getRanges()[i].getMin(), n.getRanges()[i].getMax());
         }
-        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<>(), newRanges, true, (RTreeNode<T>) n.neighbours[3])};
+        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<>(new LinkedList<>(), newRanges, true, (RTreeNode<T>) n.neighbours[3])};
 
         // Add children to parent
         if ( n_nodes[1].neighbours[3] != null ) ((RTreeNode<T>) n_nodes[1].neighbours[3]).addChild(n_nodes[1]);
@@ -477,9 +493,10 @@ public class RTree<T extends RTreeEntry> {
 
         // Select the first elements to add
         ArrayList<T> ss = pickLeafSeeds(cc);
-        n_nodes[0].addEntries(ss.get(0));
-        n_nodes[1].addEntries(ss.get(1));
+        n_nodes[0].addEntry(ss.get(0));
+        n_nodes[1].addEntry(ss.get(1));
 
+        // While there are still stuff to add
         while ( !cc.isEmpty() ) {
             if ((n_nodes[0].getItem().size() >= minEntries) &&
                 (n_nodes[1].getItem().size() + cc.size() == minEntries)) {
@@ -507,7 +524,7 @@ public class RTree<T extends RTreeEntry> {
             double e1 = n_nodes[1].getAreaExpansion(c);
             // If factor differentiates, insert and move on
             if (e0 != e1) {
-                n_nodes[e0 < e1 ? 0 : 1].addEntries(c);
+                n_nodes[e0 < e1 ? 0 : 1].addEntry(c);
                 continue;
             }
 
@@ -517,15 +534,15 @@ public class RTree<T extends RTreeEntry> {
             double a1 = getArea(n_nodes[1]); // Calculates the Initial Area
             // If factor differentiates, insert and move on
             if (a0 != a1) {
-                n_nodes[a0 < a1 ? 0 : 1].addEntries(c);
+                n_nodes[a0 < a1 ? 0 : 1].addEntry(c);
                 continue;
             }
 
 
             // Factor 3: Decide on number of entries //
             if (n_nodes[0].getItem().size() < n_nodes[1].getItem().size())
-                n_nodes[0].addEntries(c);
-            else n_nodes[1].addEntries(c);
+                n_nodes[0].addEntry(c);
+            else n_nodes[1].addEntry(c);
         }
 
         // Restrict their ranges
@@ -554,8 +571,9 @@ public class RTree<T extends RTreeEntry> {
 
         // The best pair of entries to split by
         ArrayList<T> bestPair = new ArrayList<>(2);
-        bestPair.add(null); bestPair.add(null); // this is so inelegant but java doesnt like generic arrays
-        for ( int dim = 0; dim < numDims; dim++ ) {
+        bestPair.add(null); bestPair.add(null); // this is so inelegant but java doesn't like generic arrays
+
+        for ( int dim = 0; dim < numDims; dim++ ) { // For each dimension
 
             // Many variables to keep track of range of min and max in the dimension
             double dimLb = Double.MAX_VALUE, dimMinUb = Double.MAX_VALUE;
@@ -589,7 +607,7 @@ public class RTree<T extends RTreeEntry> {
             // Calculate the pairs separation value
             double sep = Math.abs((dimMinUb - dimMaxLb) / (dimUb - dimLb));
 
-            // Check if this split the array "more"
+            // Check if this splits the array "more"
             if ( sep >= bestSep ) {
                 // Maximises the split and replaces the smaller one
                 bestPair.set(0, nMaxLb);

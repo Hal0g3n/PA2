@@ -41,7 +41,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     public BitSet getId() { return this.id; }
 
-    public void addEntries(T entry) {
+    public void addEntry(T entry) {
         this.item.add(entry);
         ++numEntries;
     }
@@ -51,6 +51,11 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         numEntries += entries.size();
     }
 
+    /**
+     * Checks if the ranges overlap in the domain
+     * @param r1 - First set of ranges
+     * @param r2 - Second set of ranges
+     */
     static public boolean isOverlap(Range<Double>[] r1, Range<Double>[] r2 ) {
         if (r1.length != r2.length) throw new IllegalArgumentException("输入的顶点的范围数不一样");
 
@@ -62,6 +67,11 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         return true;
     }
 
+    /**
+     * Checks if point is in the range
+     * @param r1 - The ranges to consider
+     * @param coords - The coordinates of the entry
+     */
     static public boolean isInRange(Range<Double>[] r1, Double[] coords) {
         if (r1.length != coords.length) throw new IllegalArgumentException("输入的范围数不一样");
 
@@ -73,6 +83,9 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         return true;
     }
 
+    /**
+     * Calculates the area of the given node
+     */
     static public double getArea(RTreeNode node) {
         double area = 1.0f;
         for (Range<Double> range : node.ranges) area *= (range.getMax() - range.getMin());
@@ -195,7 +208,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
 
     /**
-     * Returns increase in area to include given element
+     * Returns increase in area to include given node
      * @param e - The element that may be inserted
      */
     double getAreaExpansion( RTreeNode<T> e ) {
