@@ -13,7 +13,7 @@ import static model.RTreeNode.*;
  *
  * @param <T> the Entry to store in the model.RTree.
  */
-public class RTree<T extends Comparable<T> & RTreeEntry> {
+public class RTree<T extends RTreeEntry> {
     private String id;
 
     private final int maxEntries;
