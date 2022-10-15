@@ -1,5 +1,6 @@
 package p2pOverlay;
 
+import p2pOverlay.services.PeerService;
 import p2pOverlay.util.Connection;
 
 import java.net.InetSocketAddress;
@@ -29,6 +30,9 @@ public class Peer {
     public Peer(BitSet id) {
         this(id, new ArrayList<>(), new ArrayList<>());
     }
+    public Peer (String id) {
+        this(PeerService.stringToBitSet(id));
+    }
 
     public Peer(){ this(new BitSet(NBITS)); }
 
@@ -40,7 +44,11 @@ public class Peer {
         return 0;
     }
 
+
     public void setId(int id){this.id = BitSet.valueOf(new long[] {id});}
+    public void setId(String id) {
+        this.id = PeerService.stringToBitSet(id);
+    }
 
     // TODO: check if ring level exists
     public void updateTable(int h, Connection clockwiseNeighbour, Connection antiClockwiseNeighbour) {
