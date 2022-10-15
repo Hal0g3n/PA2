@@ -91,9 +91,9 @@ public class RTree<T extends RTreeEntry> {
             if (RTreeNode.isOverlap(ranges, n.getRanges()))
                 results.addAll(n.getItem());
         else // If not leaf, travel down the children
-            for (int i = 0; i < 2; ++i) { // 2 children
-                // Subtree does not contain the query range
-                if (!RTreeNode.isOverlap(ranges, ((RTreeNode<T>) n.neighbours[i]).getRanges())) continue;
+            for (int i = 0; i < maxChildren; ++i) { // 2 children
+                // Subtree does not contain the query range or child does not exist
+                if (n.neighbours[i] == null || !RTreeNode.isOverlap(ranges, ((RTreeNode<T>) n.neighbours[i]).getRanges())) continue;
 
                 // If leaf domain is overlapping
                 search((RTreeNode<T>) n.neighbours[i], ranges, results);
@@ -268,7 +268,12 @@ public class RTree<T extends RTreeEntry> {
         if (n == null || n.isLeaf()) return splitRTreeLeaf(n);
 
         // Generate the new nodes (Recycle the old node)
-        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<>(), n.getRanges(), false, (RTreeNode<T>) n.neighbours[2])};
+        // have to deep copy ranges
+        Range<Double>[] newRanges = new Range[numDims];
+        for (int i = 0; i < numDims; ++i) {
+            newRanges[i] = new Range<>(n.getRanges()[i].getMin(), n.getRanges()[i].getMax());
+        }
+        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<>(), newRanges, false, (RTreeNode<T>) n.neighbours[3])};
 
         // Add children to parent
         if ( n_nodes[1].neighbours[3] != null ) ((RTreeNode<T>) n_nodes[1].neighbours[3]).addChild(n_nodes[1]);
@@ -405,7 +410,12 @@ public class RTree<T extends RTreeEntry> {
         if (n == null) return null;
 
         // Generate the new nodes (Recycle the old node)
-        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<>(), n.getRanges(), true, (RTreeNode<T>) n.neighbours[2])};
+        // have to deep copy ranges
+        Range<Double>[] newRanges = new Range[numDims];
+        for (int i = 0; i < numDims; ++i) {
+            newRanges[i] = new Range<>(n.getRanges()[i].getMin(), n.getRanges()[i].getMax());
+        }
+        RTreeNode<T>[] n_nodes = new RTreeNode[] {n, new RTreeNode<T>(new LinkedList<>(), newRanges, true, (RTreeNode<T>) n.neighbours[3])};
 
         // Add children to parent
         if ( n_nodes[1].neighbours[3] != null ) ((RTreeNode<T>) n_nodes[1].neighbours[3]).addChild(n_nodes[1]);
@@ -470,8 +480,10 @@ public class RTree<T extends RTreeEntry> {
         }
 
         // Restrict their ranges
+        System.out.println(Arrays.toString(n_nodes[0].getRanges()) + " " + n_nodes[0].getItem());
         n_nodes[0].tighten();
         n_nodes[1].tighten();
+        System.out.println(Arrays.toString(n_nodes[0].getRanges()) + " " + n_nodes[0].getItem());
 
         // And returns the new nodes
         return n_nodes;
@@ -495,6 +507,7 @@ public class RTree<T extends RTreeEntry> {
 
         // The best pair of entries to split by
         ArrayList<T> bestPair = new ArrayList<>(2);
+        bestPair.add(null); bestPair.add(null); // this is so inelegant but java doesnt like generic arrays
         for ( int dim = 0; dim < numDims; dim++ ) {
 
             // Many variables to keep track of range of min and max in the dimension
@@ -532,8 +545,8 @@ public class RTree<T extends RTreeEntry> {
             // Check if this split the array "more"
             if ( sep >= bestSep ) {
                 // Maximises the split and replaces the smaller one
-                bestPair.add(nMaxLb);
-                bestPair.add(nMinUb);
+                bestPair.set(0, nMaxLb);
+                bestPair.set(1, nMinUb);
                 bestSep = sep;
             }
         }

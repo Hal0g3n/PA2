@@ -117,7 +117,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         // Copies the old ranges
         Range<Double>[] n_ranges = Arrays.copyOf(ranges, ranges.length);
 
-        if (this.isLeaf()) {
+        if (this.leaf) {
             // Get all parameter values of entries stored
             List<Double[]> elements = item.stream().map(RTreeEntry::getParamValues).collect(Collectors.toList());
 
@@ -132,18 +132,19 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
                     // Replace largest with the largest possible
                     n_ranges[i].setMax(Math.max(n_ranges[i].getMax(), params[i]));
                 }
+                System.out.println(n_ranges[i]);
             }
         }
 
         else {
             for (int i = 0; i < ranges.length; i++) { // For each dimension
-                // Get the min of the 2 children
-                n_ranges[i].setMin(Math.max(
+                // Upper bound is the larger one
+                n_ranges[i].setMax(Math.max(
                         ((RTreeNode<T>) neighbours[0]).ranges[i].getMax(),
                         ((RTreeNode<T>) neighbours[1]).ranges[i].getMax()
                 ));
 
-                // Get the max of the 2 children
+                // Lower bound is the smaller one
                 n_ranges[i].setMin(Math.min(
                     ((RTreeNode<T>) neighbours[0]).ranges[i].getMin(),
                     ((RTreeNode<T>) neighbours[1]).ranges[i].getMin()
