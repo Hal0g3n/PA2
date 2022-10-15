@@ -59,6 +59,17 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         return true;
     }
 
+    static public boolean isInRange(Range<Double>[] r1, Double[] coords) {
+        if (r1.length != coords.length) throw new IllegalArgumentException("输入的范围数不一样");
+
+        for (int i = 0; i < r1.length; i++) {
+            if (coords[i] < r1[i].getMin() || r1[i].getMax() < coords[i])
+                return false;
+        }
+
+        return true;
+    }
+
     static public double getArea(RTreeNode node) {
         double area = 1.0f;
         for (Range<Double> range : node.ranges) area *= (range.getMax() - range.getMin());
@@ -105,13 +116,13 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
         if (this.isLeaf()) {
             // Get all parameter values of entries stored
-            List<double[]> elements = item.stream().map(RTreeEntry::getParamValues).collect(Collectors.toList());
+            List<Double[]> elements = item.stream().map(RTreeEntry::getParamValues).collect(Collectors.toList());
 
             for (int i = 0; i < ranges.length; i++) { // For each dimension
                 n_ranges[i].setMin(Double.MAX_VALUE);
                 n_ranges[i].setMax(Double.MIN_VALUE);
 
-                for (double[] params : elements) { // For each parameter
+                for (Double[] params : elements) { // For each parameter
                     // Replace smallest with the smallest possible
                     n_ranges[i].setMin(Math.min(n_ranges[i].getMin(), params[i]));
 
@@ -153,7 +164,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     double getAreaExpansion(T e) {
         double expanded = 1.0f;           // New area
 
-        double[] e_vals = e.getParamValues(); // Get the parametrized values
+        Double[] e_vals = e.getParamValues(); // Get the parametrized values
 
         if (e_vals.length != ranges.length) throw new IllegalArgumentException("e的参数数不对");
 

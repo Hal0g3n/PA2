@@ -1,5 +1,5 @@
 package model;
 
 public interface RTreeEntry {
-    public double[] getParamValues();
+    public Double[] getParamValues();
 }

@@ -1,6 +1,7 @@
 package model;
 
 import java.util.*;
+import java.util.stream.DoubleStream;
 
 import static model.RTreeNode.*;
 
@@ -99,26 +100,20 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
     public boolean delete(Range<Double>[] ranges, T entry) {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        RTreeNode<T> l = findLeaf(root, ranges, entry);
+        RTreeNode<T> l = findLeaf(root, entry.getParamValues(), entry);
         if (l == null) throw new IllegalStateException("找不到树叶");
         if (!l.isLeaf()) throw new IllegalStateException("找到的不是树叶");
-        
-        ListIterator<T> li = l.getItem().listIterator();
-        T toRemove = null;
-        while (li.hasNext()) {
-            T e = li.next();
-            if ( !e.equals(entry) ) continue;
-            toRemove = e;
-            break;
-        }
 
-        // RTreeNode found, size decrease and condense the tree
-        if ( toRemove != null ) {
+        for (T e : l.getItem()) {
+            if ( !e.equals(entry) ) continue;
+
+            l.getItem().remove(e);
             condenseTree(l);
             size--;
+            return true;
         }
 
-        return (toRemove != null);
+        return false;
     }
 
 
@@ -133,12 +128,12 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
     /**
      *
      * @param n
-     * @param ranges
+     * @param params
      * @param entry
      * @return
      */
-    private RTreeNode<T> findLeaf(RTreeNode<T> n, Range<Double>[] ranges, T entry) {
-        if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+    private RTreeNode<T> findLeaf(RTreeNode<T> n, Double[] params, T entry) {
+        if (params.length != n.getRanges().length) throw new IllegalArgumentException("输入的数组大小不对");
 
         if (n.isLeaf())
             for (T e: n.getItem()) {
@@ -149,10 +144,10 @@ public class RTree<T extends Comparable<T> & RTreeEntry> {
         else
             for ( int i = 0; i < 2; ++i ) {
                 // If child does not include entry range
-                if (!RTreeNode.isOverlap(((RTreeNode<T>) n.neighbours[i]).getRanges(), ranges)) continue;
+                if (!RTreeNode.isInRange(((RTreeNode<T>) n.neighbours[i]).getRanges(), params)) continue;
 
                 // Recurse to find entry in children
-                RTreeNode<T> result = findLeaf((RTreeNode<T>) n.neighbours[i], ranges, entry);
+                RTreeNode<T> result = findLeaf((RTreeNode<T>) n.neighbours[i], params, entry);
                 if ( result != null ) return result;
             }
 
