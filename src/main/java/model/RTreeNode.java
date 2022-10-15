@@ -2,9 +2,7 @@ package model;
 
 import AVLs.ElementNotFoundException;
 
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
@@ -43,9 +41,14 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     public BitSet getId() { return this.id; }
 
-    public void addEntries(T... entries) {
-        this.item.addAll(Arrays.asList(entries));
-        numEntries += entries.length;
+    public void addEntries(T entry) {
+        this.item.add(entry);
+        ++numEntries;
+    }
+
+    public void addEntries(List<T> entries) {
+        this.item.addAll(entries);
+        numEntries += entries.size();
     }
 
     static public boolean isOverlap(Range<Double>[] r1, Range<Double>[] r2 ) {

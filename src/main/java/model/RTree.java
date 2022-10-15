@@ -1,5 +1,6 @@
 package model;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.stream.DoubleStream;
 
@@ -58,6 +59,15 @@ public class RTree<T extends RTreeEntry> {
      * (Basically a segment tree)
      */
     public RTree() {this(1, 0, 1);}
+
+    /**
+     * Obtains the root
+     * @return root of the tree
+     */
+
+    public RTreeNode<T> getRoot() {
+        return root;
+    }
 
     /**
      * Searches the model.RTree for objects in query range
@@ -407,15 +417,15 @@ public class RTree<T extends RTreeEntry> {
         n.neighbours = new RTreeNode[] {null, null, null, (RTreeNode<T>) n.neighbours[3]}; // Clear the neighbours
 
         // Select the first elements to add
-        T[] ss = pickLeafSeeds(cc);
-        n_nodes[0].addEntries(ss[0]);
-        n_nodes[1].addEntries(ss[1]);
+        ArrayList<T> ss = pickLeafSeeds(cc);
+        n_nodes[0].addEntries(ss.get(0));
+        n_nodes[1].addEntries(ss.get(1));
 
         while ( !cc.isEmpty() ) {
             if ((n_nodes[0].getItem().size() >= minEntries) &&
                 (n_nodes[1].getItem().size() + cc.size() == minEntries)) {
                 // Case 1: Dump everything into the right node to meet min
-                n_nodes[1].addEntries(cc.toArray((T[]) new Object[0]));
+                n_nodes[1].addEntries(cc);
                 cc.clear();
                 return n_nodes;
             }
@@ -423,7 +433,7 @@ public class RTree<T extends RTreeEntry> {
             else if ((n_nodes[1].getItem().size() >= minEntries) &&
                      (n_nodes[0].getItem().size() + cc.size() == minEntries)) {
                 // Case 2: Dump everything into the left node to meet min
-                n_nodes[0].addEntries(cc.toArray((T[]) new Object[0]));
+                n_nodes[0].addEntries(cc);
                 cc.clear();
                 return n_nodes;
             }
@@ -476,16 +486,15 @@ public class RTree<T extends RTreeEntry> {
      *
      * @param entries - The list of entries to split
      */
-    private T[] pickLeafSeeds(LinkedList<T> entries) {
+    private ArrayList<T> pickLeafSeeds(LinkedList<T> entries) {
         // Collect the Param stuff
-        double[][] elements = (double[][]) entries.stream().map(RTreeEntry::getParamValues).toArray();
-        T[] arr_entries = (T[]) entries.toArray(); // And also make each entry more accessible
+        Double[][] elements = Arrays.copyOf(entries.stream().map(RTreeEntry::getParamValues).toArray(), entries.size(), Double[][].class);
 
         // keeps track of the best separation between the center 2 nodes
         double bestSep = 0.0f;
 
         // The best pair of entries to split by
-        T[] bestPair = null;
+        ArrayList<T> bestPair = new ArrayList<>(2);
         for ( int dim = 0; dim < numDims; dim++ ) {
 
             // Many variables to keep track of range of min and max in the dimension
@@ -498,7 +507,7 @@ public class RTree<T extends RTreeEntry> {
             // For each entry
             for (int i = 0; i < elements.length; ++i) {
                 // Get the parameters from precomp
-                double[] params = elements[i];
+                Double[] params = elements[i];
 
                 // Comparing and updating the min max, etc.
                 if ( params[dim] < dimLb ) dimLb = params[dim]; // The minimum
@@ -507,13 +516,13 @@ public class RTree<T extends RTreeEntry> {
                 // The Largest lower bound
                 if ( params[dim] > dimMaxLb ) {
                     dimMaxLb = params[dim];
-                    nMaxLb = arr_entries[i];
+                    nMaxLb = entries.get(i);
                 }
 
                 // The lowest upper bound
                 if ( params[dim] < dimMinUb ) {
                     dimMinUb = params[dim];
-                    nMinUb = arr_entries[i];
+                    nMinUb = entries.get(i);
                 }
             }
 
@@ -523,14 +532,15 @@ public class RTree<T extends RTreeEntry> {
             // Check if this split the array "more"
             if ( sep >= bestSep ) {
                 // Maximises the split and replaces the smaller one
-                bestPair = (T[]) new Object[]{ nMaxLb, nMinUb };
+                bestPair.add(nMaxLb);
+                bestPair.add(nMinUb);
                 bestSep = sep;
             }
         }
 
         // Removes from list and returns the picked Seeds
-        entries.remove(bestPair[0]);
-        entries.remove(bestPair[1]);
+        entries.remove(bestPair.get(0));
+        entries.remove(bestPair.get(1));
         return bestPair;
     }
 
