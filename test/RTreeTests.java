@@ -1,12 +1,11 @@
-import model.RTree;
-import model.RTreeEntry;
-import model.RTreeNode;
+import model.*;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.ranges.Range;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,6 +20,11 @@ public class RTreeTests {
         tree.insert(new Entry(new Double[]{5.0, 11.0}));
         System.out.println();
         System.out.println(displayRTree(tree.getRoot(), 6));
+        model.Range[] deleteRanges = new model.Range[2];
+        deleteRanges[0] = new model.Range<>(5.0, 10.0);
+        deleteRanges[1] = new model.Range<>(7.0, 12.0);
+        tree.delete(deleteRanges, new Entry(new Double[]{7.0, 10.0}));
+        System.out.println(displayRTree(tree.getRoot(), 3));
         assertEquals(10, 10);
     }
     public static String displayRTree(RTreeNode root, int count) {
@@ -36,7 +40,7 @@ public class RTreeTests {
             if (obj != null) {
                 RTreeNode node = (RTreeNode) obj;
                 // this node contains something
-                result += String.format("%-12s ", Arrays.toString(node.getRanges()));
+                result += String.format("%-12s ", Arrays.toString(node.getRanges()) + node.isLeaf());
                 if (node.isLeaf()) {
                     entrylist.add(node.getItem().toString());
                 } else {
@@ -79,5 +83,15 @@ class Entry implements RTreeEntry {
     @Override
     public String toString() {
         return Arrays.toString(coords);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Entry) || ((Entry) o).coords.length != this.coords.length) return false;
+        System.out.println(coords.length);
+        for (int i = 0; i < coords.length; ++i) {
+            if (!Objects.equals(coords[i], ((Entry) o).coords[i])) return false;
+        }
+        return true;
     }
 }

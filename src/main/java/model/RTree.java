@@ -145,13 +145,18 @@ public class RTree<T extends RTreeEntry> {
 
         if (n.isLeaf())
             for (T e: n.getItem()) {
+                System.out.println(e + " " + entry + " " + e.equals(entry));
                 if (!e.equals(entry)) continue;
                 return n; // RTreeNode found
             }
 
         else
-            for ( int i = 0; i < 2; ++i ) {
+            for ( int i = 0; i < maxChildren; ++i ) {
+                // ignore null children
+                if (n.neighbours[i] == null) continue;
                 // If child does not include entry range
+                System.out.println(Arrays.toString(params));
+                System.out.println(Arrays.toString(((RTreeNode<T>) n.neighbours[i]).getRanges()));
                 if (!RTreeNode.isInRange(((RTreeNode<T>) n.neighbours[i]).getRanges(), params)) continue;
 
                 // Recurse to find entry in children
@@ -329,7 +334,6 @@ public class RTree<T extends RTreeEntry> {
         // Restrict their ranges
         n_nodes[0].tighten();
         n_nodes[1].tighten();
-        System.out.println(n_nodes);
 
         // And returns the new nodes
         return n_nodes;
