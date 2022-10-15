@@ -132,23 +132,28 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
                     // Replace largest with the largest possible
                     n_ranges[i].setMax(Math.max(n_ranges[i].getMax(), params[i]));
                 }
-                System.out.println(n_ranges[i]);
             }
         }
 
         else {
             for (int i = 0; i < ranges.length; i++) { // For each dimension
                 // Upper bound is the larger one
-                n_ranges[i].setMax(Math.max(
-                        ((RTreeNode<T>) neighbours[0]).ranges[i].getMax(),
-                        ((RTreeNode<T>) neighbours[1]).ranges[i].getMax()
-                ));
+                if (numChildren > 1) {
+                    n_ranges[i].setMax(Math.max(
+                            ((RTreeNode<T>) neighbours[0]).ranges[i].getMax(),
+                            ((RTreeNode<T>) neighbours[1]).ranges[i].getMax()
+                    ));
 
-                // Lower bound is the smaller one
-                n_ranges[i].setMin(Math.min(
-                    ((RTreeNode<T>) neighbours[0]).ranges[i].getMin(),
-                    ((RTreeNode<T>) neighbours[1]).ranges[i].getMin()
-                ));
+                    // Lower bound is the smaller one
+                    n_ranges[i].setMin(Math.min(
+                            ((RTreeNode<T>) neighbours[0]).ranges[i].getMin(),
+                            ((RTreeNode<T>) neighbours[1]).ranges[i].getMin()
+                    ));
+                } else {
+                    RTreeNode<T> child = (RTreeNode<T>) (neighbours[0] == null ? neighbours[1] : neighbours[0]);
+                    n_ranges[i].setMax(child.ranges[i].getMax());
+                    n_ranges[i].setMin(child.ranges[i].getMin());
+                }
             }
         }
 

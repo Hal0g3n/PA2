@@ -14,13 +14,13 @@ public class RTreeTests {
 
     @Test
     void SampleTest1() {
-        RTree<Entry> tree = new RTree<>(3, 1, 2);
+        RTree<Entry> tree = new RTree<>(2, 1, 2);
         tree.insert(new Entry(new Double[]{5.0, 5.0}));
         tree.insert(new Entry(new Double[]{9.0, 9.0}));
         tree.insert(new Entry(new Double[]{7.0, 10.0}));
-        tree.insert(new Entry(new Double[]{5.0, 12.0}));
+        tree.insert(new Entry(new Double[]{5.0, 11.0}));
         System.out.println();
-        System.out.println(displayRTree(tree.getRoot(), 3));
+        System.out.println(displayRTree(tree.getRoot(), 6));
         assertEquals(10, 10);
     }
     public static String displayRTree(RTreeNode root, int count) {
@@ -56,6 +56,7 @@ public class RTreeTests {
                 ++level;
             }
         }
+        result += "\n";
         // entries
         for (String e: entrylist)
             result += e + " ";

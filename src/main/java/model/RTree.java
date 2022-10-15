@@ -1,8 +1,6 @@
 package model;
 
-import java.lang.reflect.Array;
 import java.util.*;
-import java.util.stream.DoubleStream;
 
 import static model.RTreeNode.*;
 
@@ -246,7 +244,7 @@ public class RTree<T extends RTreeEntry> {
         if ( nn != null ) {
             nn.tighten();
             if ( ((RTreeNode<T>) n.neighbours[3]).getNumChildren() > maxChildren ) {
-                RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[2]);
+                RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[3]);
                 adjustTree(splits[0], splits[1]);
             }
         }
@@ -290,9 +288,9 @@ public class RTree<T extends RTreeEntry> {
         n.neighbours = new RTreeNode[] {null, null, null, (RTreeNode<T>) n.neighbours[3]}; // Clear the neighbours
 
         // Select the first elements to add
-        RTreeNode<T>[] ss = pickNodeSeeds(cc);
-        n_nodes[0].addChild(ss[0]);
-        n_nodes[1].addChild(ss[1]);
+        ArrayList<RTreeNode<T>> ss = pickNodeSeeds(cc);
+        n_nodes[0].addChild(ss.get(0));
+        n_nodes[1].addChild(ss.get(1));
 
         while ( !cc.isEmpty() ) {
             // This while loop is to make it nicer
@@ -331,6 +329,7 @@ public class RTree<T extends RTreeEntry> {
         // Restrict their ranges
         n_nodes[0].tighten();
         n_nodes[1].tighten();
+        System.out.println(n_nodes);
 
         // And returns the new nodes
         return n_nodes;
@@ -341,17 +340,18 @@ public class RTree<T extends RTreeEntry> {
      * Selects the 2 entries acting as the splitting pair
      * One goes in left and the other goes in right
      * Everything else will is only better in one than the other
-     *
+     * <p>
      * The picked entries are ejected from the list passed in
      *
      * @param children - The list of entries to split
      */
-    private RTreeNode<T>[] pickNodeSeeds(LinkedList<RTreeNode<T>> children) {
+    private ArrayList<RTreeNode<T>> pickNodeSeeds(LinkedList<RTreeNode<T>> children) {
         // keeps track of the best separation between the center 2 nodes
         double bestSep = 0.0f;
 
         // The best pair of children to split by
-        RTreeNode<T>[] bestPair = null;
+        ArrayList<RTreeNode<T>> bestPair = new ArrayList<>(2);
+        bestPair.add(null); bestPair.add(null); // this is an array but java dont like a real array
         for ( int dim = 0; dim < numDims; dim++ ) {
 
             // Many variables to keep track of range of min and max in the dimension
@@ -387,14 +387,15 @@ public class RTree<T extends RTreeEntry> {
             // Check if this split the array "more"
             if ( sep >= bestSep ) {
                 // Maximises the split and replaces the smaller one
-                bestPair = (RTreeNode<T>[]) new Object[]{ nMaxLb, nMinUb };
+                bestPair.set(0, nMaxLb);
+                bestPair.set(1, nMinUb);
                 bestSep = sep;
             }
         }
 
         // Removes from list and returns the picked Seeds
-        children.remove(bestPair[0]);
-        children.remove(bestPair[1]);
+        children.remove(bestPair.get(0));
+        children.remove(bestPair.get(1));
         return bestPair;
     }
 
@@ -480,10 +481,8 @@ public class RTree<T extends RTreeEntry> {
         }
 
         // Restrict their ranges
-        System.out.println(Arrays.toString(n_nodes[0].getRanges()) + " " + n_nodes[0].getItem());
         n_nodes[0].tighten();
         n_nodes[1].tighten();
-        System.out.println(Arrays.toString(n_nodes[0].getRanges()) + " " + n_nodes[0].getItem());
 
         // And returns the new nodes
         return n_nodes;
@@ -563,7 +562,8 @@ public class RTree<T extends RTreeEntry> {
 
         double minInc = Double.MAX_VALUE;
         RTreeNode<T> next = null;
-        for ( RTreeNode<T> c: (RTreeNode<T>[]) n.neighbours ) {
+        for ( int k = 0; k < maxChildren; ++k ) {
+            RTreeNode<T> c = (RTreeNode<T>) n.neighbours[k];
             double inc = c.getAreaExpansion( e );
             if ( inc < minInc ) {
                 minInc = inc;
