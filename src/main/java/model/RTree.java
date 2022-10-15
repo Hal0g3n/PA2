@@ -219,7 +219,7 @@ public class RTree<T extends RTreeEntry> {
 
         // It is time to die leaf, you are too fat
         if ( leaf.getItem().size() > maxEntries ) {
-            RTreeNode<T>[] splits = splitRTreeNode(leaf);
+            RTreeNode<T>[] splits = splitNode(leaf);
             adjustTree(splits[0], splits[1]);
         }
         // No splitting, just adjust the tree
@@ -293,7 +293,7 @@ public class RTree<T extends RTreeEntry> {
         if ( nn != null ) {
             nn.tighten();
             if ( ((RTreeNode<T>) n.neighbours[3]).getNumChildren() > maxChildren ) {
-                RTreeNode<T>[] splits = splitRTreeNode((RTreeNode<T>) n.neighbours[3]);
+                RTreeNode<T>[] splits = splitNode((RTreeNode<T>) n.neighbours[3]);
                 adjustTree(splits[0], splits[1]);
             }
         }
@@ -310,9 +310,9 @@ public class RTree<T extends RTreeEntry> {
      * ! Does not randomise insertion into nodes, but factors are enough to make this fast
      * @param n The node to split
      */
-    private RTreeNode<T>[] splitRTreeNode(RTreeNode<T> n) {
+    private RTreeNode<T>[] splitNode(RTreeNode<T> n) {
         // If it is leaf, call the other function
-        if (n == null || n.isLeaf()) return splitRTreeLeaf(n);
+        if (n == null || n.isLeaf()) return splitLeaf(n);
 
         // Generate the new nodes (Recycle the old node)
         // have to deep copy ranges
@@ -454,7 +454,7 @@ public class RTree<T extends RTreeEntry> {
      * ! Does not randomise insertion into nodes, but factors are enough to make this fast
      * @param n The node to split
      */
-    private RTreeNode<T>[] splitRTreeLeaf(RTreeNode<T> n) {
+    private RTreeNode<T>[] splitLeaf(RTreeNode<T> n) {
         // Java was scream so here, to appease you
         if (n == null) return null;
 
