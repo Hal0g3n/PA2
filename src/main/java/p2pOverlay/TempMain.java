@@ -31,7 +31,9 @@ public class TempMain {
         if(PORT_NUMBER != GATEWAY_PORT) {
             System.out.print("Available commands:\n" +
                     "1. Get peerID (register)\n" +
-                    "2. Join skipgraph (insert)\n");
+                    "2. Join skipgraph (insert)\n" +
+                    "3. Print routeTable (print)\n" +
+                    "4. Leave skipgaph (leave)");
             try{
                 while((line = userInput.readLine()) != null){
                     String[] tokens = line.split(" ");
@@ -39,6 +41,8 @@ public class TempMain {
                     switch(tokens[0]){
                         case "register" -> ps.register();
                         case "insert" -> ps.requestInsertion();
+                        case "print" -> ps.printRouteTable();
+                        case "leave" -> ps.stopService();
                     }
                 }
             } catch (IOException e) {

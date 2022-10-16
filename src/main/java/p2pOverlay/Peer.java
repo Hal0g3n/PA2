@@ -93,17 +93,17 @@ public class Peer {
         this.numericID = numericID;
     }
 
-    public String routeTableString() {
+    public String routeTableString(int nLen) {
         StringBuilder string = new StringBuilder("Level | Clockwise | AntiClockwise");
         for (int i = 0; i < routeTable[0].size(); i++) {
             Connection clockwise = routeTable[0].get(i);
             Connection antiClockwise = routeTable[1].get(i);
             string.append("\n").append(String.format("%d | %s,%s | %s,%s",
                     i,
-                    Encoding.bitSetToString(clockwise.getNumericID()),
-                    clockwise.getAddress(),
-                    Encoding.bitSetToString(antiClockwise.getNumericID()),
-                    antiClockwise.getAddress()
+                    clockwise == null ? "N/A" : Encoding.bitSetToString(clockwise.getNumericID(), nLen),
+                    clockwise == null ? "N/A" : clockwise.getAddress(),
+                    antiClockwise == null ? "N/A" : Encoding.bitSetToString(antiClockwise.getNumericID(), nLen),
+                    antiClockwise == null ? "N/A" : antiClockwise.getAddress()
             ));
         }
 

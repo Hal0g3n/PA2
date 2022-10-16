@@ -21,7 +21,7 @@ public class PeerService {
      *
      * */
 
-    private final static int NUMERIC_ID_LEN = 5; // no more than 32 peers in the demo
+    public final static int NUMERIC_ID_LEN = 5; // no more than 32 peers in the demo
 
     private HashMap<Integer, Boolean> usedId;
 
@@ -122,6 +122,10 @@ public class PeerService {
             }
         }
         connectionService.stopServer();
+    }
+
+    public void printRouteTable(){
+        System.out.println(head.routeTableString(NUMERIC_ID_LEN));
     }
 
     public void register() {
@@ -339,8 +343,8 @@ public class PeerService {
             case "register" -> {
                 // we need to give the peer its peerNumber and numericID
                 peerNumberCounter++;
-                int numID = ThreadLocalRandom.current().nextInt(0, (1 << NUMERIC_ID_LEN) + 1);
-                while(usedId.containsKey(numID)) numID = ThreadLocalRandom.current().nextInt(0, (1 << NUMERIC_ID_LEN) + 1);
+                int numID = ThreadLocalRandom.current().nextInt(0, (1 << NUMERIC_ID_LEN));
+                while(usedId.containsKey(numID)) numID = ThreadLocalRandom.current().nextInt(0, (1 << NUMERIC_ID_LEN));
                 usedId.put(numID, true);
                 System.out.printf("Received a registration, assigning IDs %d %d\n", peerNumberCounter, numID);
                 Message responseMsg = new Message(selfConnection,
