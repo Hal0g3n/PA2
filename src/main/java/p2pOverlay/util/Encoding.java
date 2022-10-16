@@ -32,9 +32,9 @@ public class Encoding {
         } else throw new IllegalArgumentException("ID must be a binary string");
     }
 
-    public static String bitSetToString(BitSet id) {
+    public static String bitSetToString(BitSet id, int len) {
         StringBuilder string = new StringBuilder();
-        for (int i = 0; i < id.length(); i++) {
+        for (int i = 0; i < len; i++) {
             string.append(id.get(i) ? '1' : '0');
         }
 
@@ -45,7 +45,7 @@ public class Encoding {
         BitSet bitset = new BitSet(bsLen);
         int index = 0;
         while(n != 0){
-            if((n & 1) == 1) bitset.set(index);
+            if((n & 1) == 1) bitset.set(bsLen-index-1);
             index++;
             n >>>= 1;
         }
@@ -58,7 +58,7 @@ public class Encoding {
             if(bs.get(i)) n |= 1;
             n <<= 1;
         }
-        return n;
+        return n/2; // what...
     }
 
 }
