@@ -242,10 +242,10 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         return expanded - getArea(this);
     }
 
-    @Override
-    public boolean equals(Object o) {
-        // overload of equals just in case, used in removeChild
-        return (o instanceof RTreeNode && this.getId() == ((RTreeNode<T>) o).getId());
-    }
+//    @Override
+//    public boolean equals(Object o) {
+//        // overload of equals just in case, used in removeChild
+//        return (o instanceof RTreeNode && this.getId() == ((RTreeNode<T>) o).getId());
+//    }
 }
 

@@ -488,7 +488,6 @@ public class RTree<T extends RTreeEntry> {
             }
         }
 
-        // Removes from list and returns the picked Seeds
         children.remove(bestPair.get(0));
         children.remove(bestPair.get(1));
         return bestPair;
