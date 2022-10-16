@@ -20,10 +20,7 @@ public class RTreeTests {
         tree.insert(new Entry(new Double[]{5.0, 11.0}));
         System.out.println();
         System.out.println(displayRTree(tree.getRoot(), 6));
-        model.Range[] deleteRanges = new model.Range[2];
-        deleteRanges[0] = new model.Range<>(5.0, 10.0);
-        deleteRanges[1] = new model.Range<>(7.0, 12.0);
-        tree.delete(deleteRanges, new Entry(new Double[]{7.0, 10.0}));
+        tree.delete(new Entry(new Double[]{7.0, 10.0}));
         System.out.println(displayRTree(tree.getRoot(), 3));
         assertEquals(10, 10);
     }
