@@ -3,7 +3,6 @@ package p2pOverlay;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.ActionListDialogBuilder;
-import com.googlecode.lanterna.gui2.dialogs.FileDialogBuilder;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogBuilder;
 import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
@@ -13,7 +12,6 @@ import p2pOverlay.services.PeerService;
 import p2pOverlay.util.Encoding;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.BitSet;
@@ -85,8 +83,7 @@ public class LanternaMain {
                                 Panel notRegisteredPanel = constructMessageDialog(actionListDialog, "Not Registered!");
                                 window.setComponent(notRegisteredPanel);
                                 textGUI.addWindowAndWait(window);
-                            }
-                            else {
+                            } else {
                                 Panel buttonPanel = new Panel();
                                 buttonPanel.setLayoutManager(new GridLayout(2).setHorizontalSpacing(1));
 
@@ -124,6 +121,7 @@ public class LanternaMain {
                                     String contents = contentTB.getText();
 
                                     registeredService.registerOnAcknowledge(new PopUpAcknowledge(textGUI));
+                                    // uh oh it hangs the gui
                                     registeredService.sendMessage(destId, contents);
                                 }));
                                 buttonPanel.addComponent(new Button(LocalizedString.Cancel.toString(), this::onCancel));
@@ -162,30 +160,42 @@ public class LanternaMain {
                                                 .setLeftMarginSize(1)
                                                 .setRightMarginSize(1));
 
-                                Label fileLabel = new Label("Choose a config file");
+                                Label fileLabel = new Label("Input port number");
                                 mainPanel.addComponent(fileLabel);
                                 mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
 
-                                Button fileButton = new Button("Open config file", new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        File input = new FileDialogBuilder()
-                                                .setTitle("Open File")
-                                                .setDescription("Choose a file")
-                                                .setActionLabel("Open")
-                                                .build()
-                                                .showDialog(textGUI);
-                                        System.out.println(input);
-                                        fileLabel.setText(input.getName());
-                                    }
-                                });
-                                fileButton.setLayoutData(
+                                // Config files not implemented yet, will just go with user input port
+//                                Button fileButton = new Button("Open config file", new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        File input = new FileDialogBuilder()
+//                                                .setTitle("Open File")
+//                                                .setDescription("Choose a file")
+//                                                .setActionLabel("Open")
+//                                                .build()
+//                                                .showDialog(textGUI);
+//                                        fileLabel.setText(input.getName());
+//                                    }
+//                                });
+//                                fileButton.setLayoutData(
+//                                                GridLayout.createLayoutData(
+//                                                        GridLayout.Alignment.FILL,
+//                                                        GridLayout.Alignment.CENTER,
+//                                                        true,
+//                                                        false))
+//                                        .addTo(mainPanel);
+
+                                TextBox portNumberTB = new TextBox();
+                                portNumberTB.setLayoutData(
                                                 GridLayout.createLayoutData(
                                                         GridLayout.Alignment.FILL,
                                                         GridLayout.Alignment.CENTER,
                                                         true,
                                                         false))
+                                        .setValidationPattern(Pattern.compile("\\d*"))
                                         .addTo(mainPanel);
+                                mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
+
                                 mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
 
 
@@ -196,9 +206,8 @@ public class LanternaMain {
                                     if (registered) {
                                         window.setComponent(registeredPanel);
                                         textGUI.addWindowAndWait(window);
-                                    }
-                                    else {
-                                        int portNumber = 8000;
+                                    } else {
+                                        int portNumber = Integer.parseInt(portNumberTB.getText());
                                         registeredService = new PeerService(portNumber);
                                         registeredService.startService();
                                         registeredService.register();
@@ -207,7 +216,7 @@ public class LanternaMain {
                                         if (registeredService.assignedNum) {
                                             new MessageDialogBuilder()
                                                     .setTitle("Registration success")
-                                                    .setText(String.format("PeerNum: %d, NumericID: %s", registeredService.getPeerNumber(), registeredService.getNumericID()))
+                                                    .setText(String.format("PeerNum: %d, NumericID: %s", registeredService.getPeerNumber(), Encoding.BitSetToInt(registeredService.getNumericID())))
                                                     .build()
                                                     .showDialog(textGUI);
                                         }
@@ -267,10 +276,12 @@ public class LanternaMain {
 }
 
 class PopUpAcknowledge implements PeerService.ACKCallback {
-    private WindowBasedTextGUI textGUI;
+    private final WindowBasedTextGUI textGUI;
+
     public PopUpAcknowledge(WindowBasedTextGUI textGUI) {
         this.textGUI = textGUI;
     }
+
     @Override
     public void onAcknowledge(BitSet numericId) {
         new MessageDialogBuilder()
