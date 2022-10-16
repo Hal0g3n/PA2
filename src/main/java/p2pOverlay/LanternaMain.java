@@ -46,22 +46,27 @@ public class LanternaMain {
             PrintStream printStream = new PrintStream(baos);
             PrintStream old = System.out;
             System.setOut(printStream);
+
+            // Reset terminal cursor and colors just in case
             terminal.setCursorPosition(0, 0);
             terminal.resetColorAndSGR();
             int rows = 0;
             for (int i = 8080; i < 8100; i++) {
+                // Register peer service at port
                 PeerService ps = new PeerService(i);
                 ps.startService();
 
                 if (i != 8080) ps.register();
 
+                // Capture system output to print to terminal
                 for (String line : baos.toString().split("\n")) {
                     if (rows == terminal.getTerminalSize().getRows()) {
+                        // Reset terminal if too many lines printed
                         terminal.clearScreen();
                         rows = 0;
                     }
 
-                    terminal.putString(line);
+                    terminal.putString(line.replaceAll("\\p{Cc}", ""));
                     terminal.setCursorPosition(0, terminal.getCursorPosition().getRow() + 1);
                     terminal.flush();
                     rows++;
@@ -69,31 +74,39 @@ public class LanternaMain {
                 baos.reset();
                 terminal.setCursorPosition(0, terminal.getCursorPosition().getRow() + 1);
             }
+            // Reset system.out to standard
             System.out.flush();
             System.setOut(old);
 
 
+            // Make action dialog for commands
             ActionListDialogBuilder actionListDialog = new ActionListDialogBuilder().setTitle("Choose command");
+            // We will need this panel for later to let the user know they need to register first
             Panel registeredPanel = constructMessageDialog(actionListDialog, "Already Registered");
 
 
+            // Send message command
             actionListDialog.addAction("Send Message", new Runnable() {
                         @Override
                         public void run() {
                             if (!registered) {
+                                // Display panel if not registered
                                 Panel notRegisteredPanel = constructMessageDialog(actionListDialog, "Not Registered!");
                                 window.setComponent(notRegisteredPanel);
                                 textGUI.addWindowAndWait(window);
                             } else {
+                                // Button panel for OK/Cancel
                                 Panel buttonPanel = new Panel();
                                 buttonPanel.setLayoutManager(new GridLayout(2).setHorizontalSpacing(1));
 
+                                // Main panel to contain text boxes
                                 Panel mainPanel = new Panel();
                                 mainPanel.setLayoutManager(
                                         new GridLayout(1)
                                                 .setLeftMarginSize(1)
                                                 .setRightMarginSize(1));
 
+                                //text box to contain numeric id
                                 mainPanel.addComponent(new Label("Input numeric ID"));
                                 TextBox numericIdTB = new TextBox();
                                 numericIdTB.setLayoutData(
@@ -106,6 +119,7 @@ public class LanternaMain {
                                         .addTo(mainPanel);
                                 mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
 
+                                // Textbox for user to input message contents
                                 mainPanel.addComponent(new Label("Input message contents"));
                                 TextBox contentTB = new TextBox(new TerminalSize(mainPanel.getSize().getColumns(), 5));
                                 contentTB.setLayoutData(
@@ -117,6 +131,7 @@ public class LanternaMain {
                                         .addTo(mainPanel);
                                 mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
 
+                                // Use a callback so that when PeerService receives ACK, the acknowledge message dialog pops up
                                 buttonPanel.addComponent(new Button("OK", () -> {
                                     BitSet destId = BitSet.valueOf(new long[]{Long.parseLong(numericIdTB.getText())});
                                     String contents = contentTB.getText();
@@ -125,6 +140,7 @@ public class LanternaMain {
                                     // uh oh it hangs the gui
                                     registeredService.sendMessage(destId, contents);
                                 }));
+
                                 buttonPanel.addComponent(new Button(LocalizedString.Cancel.toString(), this::onCancel));
                                 buttonPanel.setLayoutData(
                                                 GridLayout.createLayoutData(
@@ -133,6 +149,8 @@ public class LanternaMain {
                                                         false,
                                                         false))
                                         .addTo(mainPanel);
+
+                                // Set panel to window
                                 window.setComponent(mainPanel);
                                 textGUI.addWindowAndWait(window);
                             }
@@ -140,11 +158,12 @@ public class LanternaMain {
 
                         private void onCancel() {
                             window.close();
+                            // We have to call this again to be persistent
                             actionListDialog.build().showDialog(textGUI);
                         }
                     })
 
-                    // Echo
+                    // Register
                     .addAction("Register", new Runnable() {
                         @Override
                         public void run() {
@@ -155,6 +174,7 @@ public class LanternaMain {
                                 window.setComponent(registeredPanel);
                                 textGUI.addWindowAndWait(window);
                             } else {
+                                // Main panel to input port number
                                 Panel mainPanel = new Panel();
                                 mainPanel.setLayoutManager(
                                         new GridLayout(1)
@@ -164,8 +184,8 @@ public class LanternaMain {
                                 Label title = new Label("Register");
                                 mainPanel.addComponent(title);
 
-                                Label fileLabel = new Label("Input port number");
-                                mainPanel.addComponent(fileLabel);
+                                Label label = new Label("Input port number");
+                                mainPanel.addComponent(label);
                                 mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
                                 // Config files not implemented yet, will just go with user input port
 //                                Button fileButton = new Button("Open config file", new Runnable() {
@@ -202,10 +222,12 @@ public class LanternaMain {
                                 mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
 
 
+                                // Button panel for OK/Cancel
                                 Panel buttonPanel = new Panel();
                                 buttonPanel.setLayoutManager(new GridLayout(2).setHorizontalSpacing(1));
+
+                               // Register port number from textbox input
                                 buttonPanel.addComponent(new Button(LocalizedString.OK.toString(), () -> {
-                                    // TODO: Register using config, now just use a dummy port number
                                     if (registered) {
                                         window.setComponent(registeredPanel);
                                         textGUI.addWindowAndWait(window);
@@ -234,6 +256,7 @@ public class LanternaMain {
                                                         false))
                                         .addTo(mainPanel);
 
+                                // Set main panel to window
                                 window.setComponent(mainPanel);
                                 textGUI.addWindowAndWait(window);
                             }
@@ -241,6 +264,7 @@ public class LanternaMain {
 
                         private void onCancel() {
                             window.close();
+                            // Persistent action list dialog
                             actionListDialog.build().showDialog(textGUI);
                         }
 
@@ -250,6 +274,7 @@ public class LanternaMain {
         }
     }
 
+    // This function constructs a message dialog with given description and sets the window back to actionListDialog after closing
     private static Panel constructMessageDialog(ActionListDialogBuilder actionListDialog, String description) {
         Panel buttonPanel = new Panel();
         buttonPanel.setLayoutManager(new GridLayout(1).setHorizontalSpacing(1));
@@ -278,6 +303,7 @@ public class LanternaMain {
 
 }
 
+// Callback class so we know when to pop up acknowledge dialog from PeerService
 class PopUpAcknowledge implements PeerService.ACKCallback {
     private final WindowBasedTextGUI textGUI;
 

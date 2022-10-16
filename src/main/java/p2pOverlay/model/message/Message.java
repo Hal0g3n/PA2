@@ -1,6 +1,5 @@
 package p2pOverlay.model.message;
 
-import io.netty.handler.codec.MessageToMessageEncoder;
 import p2pOverlay.model.Connection;
 
 import java.io.Serializable;
