@@ -155,16 +155,16 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         }
 
         else {
-            for (int i = 0; i < ranges.length; i++) { // For each dimension
+            for (int dim = 0; dim < ranges.length; dim++) { // For each dimension
 
-                n_ranges[i].setMin(Double.MAX_VALUE);
-                n_ranges[i].setMax(-Double.MAX_VALUE);
+                n_ranges[dim].setMin(Double.MAX_VALUE);
+                n_ranges[dim].setMax(-Double.MAX_VALUE);
 
                 // For each child
-                for (int j = 0; j < 3; ++j) if (neighbours[j] != null) {
+                for (int i = 0; i < 3; ++i) if (neighbours[i] != null) {
                     // Compare with running max and min
-                    n_ranges[i].setMin(Math.min(n_ranges[i].getMin(), ((RTreeNode<T>) neighbours[j]).ranges[i].getMin()));
-                    n_ranges[i].setMax(Math.max(n_ranges[i].getMax(), ((RTreeNode<T>) neighbours[j]).ranges[i].getMax()));
+                    n_ranges[dim].setMin(Math.min(n_ranges[dim].getMin(), ((RTreeNode<T>) neighbours[i]).ranges[dim].getMin()));
+                    n_ranges[dim].setMax(Math.max(n_ranges[dim].getMax(), ((RTreeNode<T>) neighbours[i]).ranges[dim].getMax()));
                 }
             }
         }

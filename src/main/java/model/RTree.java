@@ -314,7 +314,8 @@ public class RTree<T extends RTreeEntry> {
         node.tighten();
         if (sibling != null) sibling.tighten();
 
-        if ( node == root ) {
+        if ( node == root ) { // Base case when node is root
+
             // There is a sibling to the root? this means node is not the root
             // We need to create a new root!
             if ( sibling != null ) {
@@ -334,15 +335,13 @@ public class RTree<T extends RTreeEntry> {
             return;
         }
 
-        if ( sibling != null ) { // New Sibling exists
-            // Check if splitting is required
-            if ( ((RTreeNode<T>) node.neighbours[3]).getNumChildren() > maxChildren ) {
-                RTreeNode<T>[] splits = splitNode((RTreeNode<T>) node.neighbours[3]);
-                adjustTree(splits[0], splits[1]);
-            }
+
+        if ( ((RTreeNode<T>) node.neighbours[3]).getNumChildren() > maxChildren ) {
+            RTreeNode<T>[] splits = splitNode((RTreeNode<T>) node.neighbours[3]);
+            adjustTree(splits[0], splits[1]); // Recurse up with 2 nodes instead of one
         }
 
-        else if ( node.neighbours[3] != null ) // node has parent
+        else // Recurse up
             adjustTree((RTreeNode<T>) node.neighbours[3], null);
     }
 
@@ -378,12 +377,13 @@ public class RTree<T extends RTreeEntry> {
             n.removeChild(i);
         }
 
-        n.neighbours = new RTreeNode[] {null, null, null, (RTreeNode<T>) n.neighbours[3]}; // Clear the neighbours
-
         // Select the first elements to add
         ArrayList<RTreeNode<T>> ss = pickNodeSeeds(cc);
         n_nodes[0].addChild(ss.get(0));
+        ss.get(0).neighbours[3] = n_nodes[0];
+
         n_nodes[1].addChild(ss.get(1));
+        ss.get(1).neighbours[3] = n_nodes[1];
 
         // While there are still stuff to add
         while ( !cc.isEmpty() ) {
@@ -400,6 +400,7 @@ public class RTree<T extends RTreeEntry> {
             // If factor differentiates, insert and move on
             if (e0 != e1) {
                 n_nodes[e0 < e1 ? 0 : 1].addChild(c);
+                c.neighbours[3] = n_nodes[e0 < e1 ? 0 : 1];
                 continue;
             }
 
@@ -410,14 +411,14 @@ public class RTree<T extends RTreeEntry> {
             // If factor differentiates, insert and move on
             if (a0 != a1) {
                 n_nodes[a0 < a1 ? 0 : 1].addChild(c);
+                c.neighbours[3] = n_nodes[a0 < a1 ? 0 : 1];
                 continue;
             }
 
 
             // Factor 3: Decide on number of entries //
-            if (n_nodes[0].getNumChildren() < n_nodes[1].getNumChildren())
-                n_nodes[0].addChild(c);
-            else n_nodes[1].addChild(c);
+            c.neighbours[3] = n_nodes[n_nodes[0].getNumChildren() < n_nodes[1].getNumChildren() ? 0 : 1];
+            n_nodes[n_nodes[0].getNumChildren() < n_nodes[1].getNumChildren() ? 0 : 1].addChild(c);
         }
 
         // Restrict their ranges
@@ -440,7 +441,7 @@ public class RTree<T extends RTreeEntry> {
      */
     private ArrayList<RTreeNode<T>> pickNodeSeeds(LinkedList<RTreeNode<T>> children) {
         // keeps track of the best separation between the center 2 nodes
-        double bestSep = 0.0f;
+        double bestSep = 0.0;
 
         // The best pair of children to split by
         ArrayList<RTreeNode<T>> bestPair = new ArrayList<>(2);
@@ -448,42 +449,34 @@ public class RTree<T extends RTreeEntry> {
 
         for ( int dim = 0; dim < numDims; dim++ ) { // For each dimension
 
-            // Many variables to keep track of range of min and max in the dimension
-            double dimLb = Double.MAX_VALUE, dimMinUb = Double.MAX_VALUE;
-            double dimUb = -1.0f * Double.MAX_VALUE, dimMaxLb = -1.0f * Double.MAX_VALUE;
+            // Variables to keep track of range of min and max in the dimension
+            double dimLb = Double.MAX_VALUE, dimUb = Double.MAX_VALUE;
 
-            // Keeps track of children with largest Min and smallest Max
-            RTreeNode<T> nMaxLb = null, nMinUb = null;
-
-            // For each child
+            // Getting max and min for normalisation
             for (RTreeNode<T> e : children) {
-
                 // Comparing and updating the min max, etc.
-                if ( e.getRanges()[dim].getMin() < dimLb ) dimLb = e.getRanges()[dim].getMin(); // The minimum
-                if ( e.getRanges()[dim].getMax() > dimUb ) dimUb = e.getRanges()[dim].getMax(); // The maximum
-
-                // The Largest lower bound
-                if ( e.getRanges()[dim].getMin() > dimMaxLb ) {
-                    dimMaxLb = e.getRanges()[dim].getMin();
-                    nMaxLb = e;
-                }
-
-                // The Smallest upper bound
-                else if ( e.getRanges()[dim].getMax() < dimMinUb ) {
-                    dimMinUb = e.getRanges()[dim].getMax();
-                    nMinUb = e;
-                }
+                if (e.getRanges()[dim].getMin() < dimLb) dimLb = e.getRanges()[dim].getMin(); // The minimum
+                if (e.getRanges()[dim].getMax() > dimUb) dimUb = e.getRanges()[dim].getMax(); // The maximum
             }
 
-            // Calculate the pairs separation value
-            double sep = Math.abs((dimMinUb - dimMaxLb) / (dimUb - dimLb));
+            // For each pair of children
+            // While this is O(children ^2), the max no of children is 2, so this is just O(4) = O(1)
+            // I love abusing constants
+            for (RTreeNode<T> e1 : children) for (RTreeNode<T> e2 : children) if (e1 != e2) {
 
-            // Check if this split the array "more"
-            if ( sep >= bestSep ) {
-                // Maximises the split and replaces the smaller one
-                bestPair.set(0, nMaxLb);
-                bestPair.set(1, nMinUb);
-                bestSep = sep;
+                double dimMinUb = Math.max(e1.ranges[dim].getMin(), e2.ranges[dim].getMin());
+                double dimMaxLb = Math.min(e1.ranges[dim].getMax(), e2.ranges[dim].getMax());
+
+                // Calculate the pairs separation value
+                double sep = Math.abs((dimMinUb - dimMaxLb) / (dimUb - dimLb));
+
+                // Check if this split the array "more"
+                if ( sep >= bestSep ) {
+                    // Maximises the split and replaces the smaller one
+                    bestPair.set(0, e1);
+                    bestPair.set(1, e2);
+                    bestSep = sep;
+                }
             }
         }
 
