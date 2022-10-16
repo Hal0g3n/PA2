@@ -132,7 +132,7 @@ public class RTree<T extends RTreeEntry> {
 
         RTreeNode<T> parent = root; // parent of n_node (will be found soon)
 
-        for (int lvl = 0; lvl < node.getId().size(); ++lvl) {
+        for (int lvl = 0; lvl < node.getId().length; ++lvl) {
 
             for (Node<List<T>> child : parent.neighbours) {
                 if (child != node) continue;
@@ -144,7 +144,7 @@ public class RTree<T extends RTreeEntry> {
             }
 
             // Not found at this level, go down
-            parent = (RTreeNode<T>) root.neighbours[node.getId().get(lvl) ? 1 : 0];
+            parent = (RTreeNode<T>) root.neighbours[node.getId()[lvl] ? 1 : 0];
         }
 
         return false;
@@ -246,9 +246,9 @@ public class RTree<T extends RTreeEntry> {
     public void insert(GhostNode<T> n_node) {
         RTreeNode<T> parent = root; // parent of n_node (will be found soon)
 
-        for (int lvl = 0; lvl < n_node.getId().size(); ++lvl) {
+        for (int lvl = 0; lvl < n_node.getId().length; ++lvl) {
             // If we cannot take the next step, we insert here
-            if (parent.neighbours[n_node.getId().get(lvl) ? 1 : 0] == null || !(parent.neighbours[n_node.getId().get(lvl) ? 1 : 0] instanceof GhostNode)) {
+            if (parent.neighbours[n_node.getId()[lvl] ? 1 : 0] == null || !(parent.neighbours[n_node.getId()[lvl] ? 1 : 0] instanceof GhostNode)) {
                 // Add to parent
                 parent.addChild(n_node);
 
@@ -263,7 +263,7 @@ public class RTree<T extends RTreeEntry> {
                 // Insertion Successful
                 return;
             }
-            else parent = (RTreeNode<T>) root.neighbours[n_node.getId().get(lvl) ? 1 : 0];
+            else parent = (RTreeNode<T>) root.neighbours[n_node.getId()[lvl] ? 1 : 0];
         }
 
         throw new IllegalStateException("找不到输入顶点的长辈");
