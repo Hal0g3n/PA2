@@ -52,7 +52,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
      * @param r1 - First set of ranges
      * @param r2 - Second set of ranges
      */
-    static public boolean isOverlap(Range<Double>[] r1, Range<Double>[] r2 ) {
+    static public boolean isOverlap(Range<Double>[] r1, Range<Double>[] r2) {
         if (r1.length != r2.length) throw new IllegalArgumentException("输入的顶点的范围数不一样");
 
         for (int i = 0; i < r1.length; i++) {

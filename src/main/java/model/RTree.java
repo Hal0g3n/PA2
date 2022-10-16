@@ -81,15 +81,11 @@ public class RTree<T extends RTreeEntry> {
     private void search(RTreeNode<T> n, Range<Double>[] ranges, LinkedList<T> results) {
         if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
 
-        if (n.isLeaf()) // If leaf, add the children
-            // Check if children is overlapping
-            // ** Actually entry coords are a point while the leaf node coords area are a range so still have to check
-            // Add Entry to results
-            if (RTreeNode.isOverlap(ranges, n.getRanges()))
-                for (T e: n.getItem()) {
-                    if (RTreeNode.isInRange(ranges, e.getParamValues()))
-                        results.add(e);
-                }
+        if (n.isLeaf()) // n is leaf, contains entries
+            for (T e: n.getItem()) { // For each entry
+                if (RTreeNode.isInRange(ranges, e.getParamValues()))
+                    results.add(e);
+            }
         else // If not leaf, travel down the children
             for (int i = 0; i < maxChildren; ++i) { // 2 children
                 // Subtree does not contain the query range or child does not exist
