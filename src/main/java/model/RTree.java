@@ -98,7 +98,6 @@ public class RTree<T extends RTreeEntry> {
 
     /**
      * Deletes the entry associated with the given rectangle from the model.RTree
-     * TODO: delete does not require ranges, fix that (I think can just remove ranges?)
      * @param entry the entry to delete
      * @return true if the entry was deleted from the model.RTree.
      */
@@ -172,8 +171,6 @@ public class RTree<T extends RTreeEntry> {
                 // ignore null children
                 if (n.neighbours[i] == null) continue;
                 // If child does not include entry range
-                System.out.println(Arrays.toString(params));
-                System.out.println(Arrays.toString(((RTreeNode<T>) n.neighbours[i]).getRanges()));
                 if (!RTreeNode.isInRange(((RTreeNode<T>) n.neighbours[i]).getRanges(), params)) continue;
 
                 // Recurse to find entry in children
@@ -196,12 +193,12 @@ public class RTree<T extends RTreeEntry> {
         while ( n != root ) {
             if ( n.isLeaf() && (n.getItem().size() < minEntries)) {
                 orphans.addAll(n.getItem());
-                ((RTreeNode<T>) n.neighbours[3]).removeChild(n.getId().get(n.getId().size() - 1) ? 1 : 0);
+                ((RTreeNode<T>) n.neighbours[3]).removeChild(n);
             }
             else if (!n.isLeaf() && (n.getNumChildren() < minChildren)) {
                 // This only works for our case where minChildren is 1
                 // Since the node would have 0 children when it has below minChildren amount of children
-                ((RTreeNode<T>) n.neighbours[3]).removeChild(n.getId().get(n.getId().size() - 1) ? 1 : 0);
+                ((RTreeNode<T>) n.neighbours[3]).removeChild(n);
             }
             else n.tighten();
 

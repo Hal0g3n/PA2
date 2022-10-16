@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 
 public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     // data members
-    private BitSet id;
     public Range<Double>[] ranges;
 
     private long numEntries;
@@ -27,15 +26,25 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         neighbours[3] = parent;
         this.leaf = leaf;
         this.ranges = ranges;
-
-        id = new BitSet();
     }
 
     public Range<Double>[] getRanges() {
         return ranges;
     }
 
-    public BitSet getId() { return this.id; }
+    public BitSet getId() {
+        // O(log N) that directly generates id dynamically
+        if (neighbours[3] == null)
+            return new BitSet(0);
+        else {
+            BitSet parentId = ((RTreeNode) neighbours[3]).getId();
+            BitSet id = new BitSet((parentId.size() + 1));
+            id.or(parentId);
+            if (neighbours[3].neighbours[1] == this)
+                id.set(parentId.size());
+            return id;
+        }
+    }
 
     public void addEntry(T entry) {
         this.item.add(entry);
@@ -110,7 +119,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
     public void removeChild(RTreeNode node) {
         for (int i = 0; i < 3; ++i) {
-            if (neighbours[i].equals(node)) {
+            if (neighbours[i] == node) {
                 neighbours[i] = null;
                 --numChildren;
                 return;
@@ -173,11 +182,6 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         numEntries = item.size();
         for (int i = 0; i < 2; ++i) if (neighbours[i] != null) {
             numEntries += ((RTreeNode<T>) neighbours[i]).numEntries;
-
-            // Update the id of child
-            ((RTreeNode<T>) neighbours[i]).id = new BitSet(id.length() + 1);
-            ((RTreeNode<T>) neighbours[i]).id.or(id);
-            if (i == 1) ((RTreeNode<T>) neighbours[i]).id.set(id.length());
         }
     }
 
@@ -239,7 +243,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
     @Override
     public boolean equals(Object o) {
         // overload of equals just in case, used in removeChild
-        return (o instanceof RTreeNode && this.id == ((RTreeNode<T>) o).id);
+        return (o instanceof RTreeNode && this.getId() == ((RTreeNode<T>) o).getId());
     }
 }
 

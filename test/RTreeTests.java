@@ -114,11 +114,12 @@ public class RTreeTests {
         queue.add(root);
         LinkedList<String> entrylist = new LinkedList<>();
         while (inNodes > 0) {
-            Object obj = queue.remove(); --inNodes;
+            Object obj = queue.remove();
             if (obj != null) {
+                --inNodes;
                 RTreeNode node = (RTreeNode) obj;
                 // this node contains something
-                result.append(String.format("%-12s ", Arrays.toString(node.getRanges()) + node.isLeaf()));
+                result.append(String.format("%-12s ", Arrays.toString(node.getRanges()) + node.isLeaf() + node.getId().size()));
                 if (node.isLeaf()) {
                     entrylist.add(node.getItem().toString());
                 } else {
@@ -130,6 +131,7 @@ public class RTreeTests {
                 }
             } else {
                 result.append("            ");
+
                 queue.add(null);
                 queue.add(null);
             }
