@@ -416,7 +416,7 @@ public class RTree<T extends RTreeEntry> {
 
 
             // Factor 3: Decide on number of entries //
-            if (n_nodes[0].getItem().size() < n_nodes[1].getItem().size())
+            if (n_nodes[0].getNumChildren() < n_nodes[1].getNumChildren())
                 n_nodes[0].addChild(c);
             else n_nodes[1].addChild(c);
         }

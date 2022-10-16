@@ -65,12 +65,19 @@ public class RTreeTests {
         while (T-- > 0) { // For each trial
 
             // Create a new tree
-            RTree<Entry> tree = new RTree<>((int) (Math.random() * 8) + 2, 1, 2);
+            int max = (int) (Math.random() * 8) + 2;
+            RTree<Entry> tree = new RTree<>(max, 1, 2);
 
             ArrayList<Entry> entries = new ArrayList<>();
             for (int i = 0; i < N; ++i) entries.add(new Entry(Math.random(), Math.random()));
+            System.out.println("===========================================================");
+            System.out.println(max);
+            System.out.println(entries);
 
-            for (Entry e : entries) tree.insert(e);
+            for (Entry e : entries) {
+                System.out.println(e.toString());
+                tree.insert(e);
+            }
 
             Double[] inputs = new Double[]{Math.random(), Math.random(),Math.random(), Math.random()};
             Arrays.sort(inputs);
@@ -79,6 +86,8 @@ public class RTreeTests {
                     new Range(inputs[0], inputs[2]),
                     new Range(inputs[1], inputs[3])
             };
+
+            System.out.printf("(%f %f) (%f %f)\n", inputs[0], inputs[2], inputs[1], inputs[3]);
 
             List<Entry> result = tree.search(query);
 
@@ -89,10 +98,9 @@ public class RTreeTests {
             result.sort((a, b) -> (int) signum(!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
             entries.sort((a, b) -> (int) signum(!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
 
-            System.out.println("===========================================================");
-            System.out.printf("(%f %f) (%f %f)\n", inputs[0], inputs[2], inputs[1], inputs[3]);
             System.out.println(entries);
             System.out.println(result);
+            System.out.println("===========================================================");
 
             if (result.size() != entries.size()) {
                 System.out.println();

@@ -109,6 +109,8 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
                 return;
             }
         }
+        System.out.println(this);
+        System.out.println(Arrays.toString(neighbours));
         throw new IllegalStateException("太多小孩了");
     }
 
