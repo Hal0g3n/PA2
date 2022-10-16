@@ -8,6 +8,7 @@ public class JoinMessage extends Message {
     private ArrayList<Connection> ringAnticlockwise;
     private boolean performInsertions;
     private Connection joiningNode;
+    private final int originalLvl;
     private int ringLvl;
 
     public JoinMessage(Connection sourceNode, String messageContent, String messageCommand, boolean performInsertions, Connection joiningNode, int ringLvl) {
@@ -16,11 +17,11 @@ public class JoinMessage extends Message {
         this.performInsertions = performInsertions;
         this.joiningNode = joiningNode;
         this.ringLvl = ringLvl;
-
+        this.originalLvl = ringLvl;
         this.ringClockwise = new ArrayList<>();
         this.ringAnticlockwise = new ArrayList<>();
 
-        for(int i = 0; i < ringLvl; i++){
+        for(int i = 0; i <= ringLvl; i++){
             ringClockwise.add(null);
             ringAnticlockwise.add(null);
         }
@@ -66,4 +67,9 @@ public class JoinMessage extends Message {
     public void setRingLvl(int ringLvl) {
         this.ringLvl = ringLvl;
     }
+
+    public int getOriginalLvl() {
+        return originalLvl;
+    }
+
 }

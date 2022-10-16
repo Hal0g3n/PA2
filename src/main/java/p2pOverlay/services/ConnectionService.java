@@ -87,7 +87,8 @@ public class ConnectionService {
 
     public void sendMessage(Message message, Connection connection){
         InetSocketAddress inetSocketAddress = connection.getAddress();
-        sendMessage(message, inetSocketAddress.getAddress().toString(), inetSocketAddress.getPort());
+        //System.out.printf("calling overloaded with params msg, %s, %d\n", inetSocketAddress.getAddress().getHostAddress(), inetSocketAddress.getPort());
+        sendMessage(message, inetSocketAddress.getAddress().getHostAddress(), inetSocketAddress.getPort());
     }
 
     public void sendMessage(Message message, String ip, int port){

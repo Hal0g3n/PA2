@@ -30,13 +30,15 @@ public class TempMain {
         ps.startService();
         if(PORT_NUMBER != GATEWAY_PORT) {
             System.out.print("Available commands:\n" +
-                    "1. Get peerID (register)\n");
+                    "1. Get peerID (register)\n" +
+                    "2. Join skipgraph (insert)\n");
             try{
                 while((line = userInput.readLine()) != null){
                     String[] tokens = line.split(" ");
                     System.out.println("Command recognised as: " + tokens[0]);
                     switch(tokens[0]){
                         case "register" -> ps.register();
+                        case "insert" -> ps.requestInsertion();
                     }
                 }
             } catch (IOException e) {
