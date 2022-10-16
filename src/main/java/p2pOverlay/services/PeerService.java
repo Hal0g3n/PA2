@@ -89,6 +89,41 @@ public class PeerService {
         }
     }
 
+    public void stopService(){
+        // before we can stop the service, we first have to inform all our friends
+        // on the routeTable that I'm no longer here and driving a wedge
+        // between their loving relationship :(
+
+        // for each ringLvl, tell the clockwise to set your current anticlockwise as neighbour
+        // similarly do the same to the anticlockwise
+
+        for(int i = 0; i < NUMERIC_ID_LEN; i++){
+            Connection clockwise = head.getClockwiseNeighbour(i);
+            Connection anticlockwise = head.getAnticlockwiseNeighbour(i);
+            if(clockwise != null && anticlockwise != null){
+
+                Message becomeNeighbour;
+
+                // informing the clockwise
+                becomeNeighbour = new Message(
+                    clockwise,
+                        String.format("clockwise:%d", i),
+                        "neighbour"
+                );
+                connectionService.sendMessage(becomeNeighbour, anticlockwise);
+
+                // informing the anticlockwise
+                becomeNeighbour = new Message(
+                        anticlockwise,
+                        String.format("anticlockwise:%d", i),
+                        "neighbour"
+                );
+                connectionService.sendMessage(becomeNeighbour, clockwise);
+            }
+        }
+        connectionService.stopServer();
+    }
+
     public void register() {
 
         // in this case, it is more convenient to just send a registration to 8080
@@ -312,11 +347,9 @@ public class PeerService {
                         String.format("%d %d", peerNumberCounter, numID),
                         "assignedNum");
                 ctx.writeAndFlush(responseMsg);
-                ctx.close(); // seems like CTX is blocking...
             }
 
             case "assignedNum" -> {
-
                 // I received a numericID from the gateway
                 // messageContent = peerNumber numID
                 String[] tokens = msg.getMessageContent().split(" ");
@@ -326,21 +359,17 @@ public class PeerService {
                 this.selfConnection.setPeerNum(Integer.parseInt(tokens[0]));
                 // now that I have a numericID, I need to insert myself into the skipgraph
                 System.out.printf("Peer registration complete with assigned IDs %s %s\n", tokens[0], tokens[1]);
-                ctx.close();
             }
 
             case "routing" -> {
                 routeByNumericID((RouteMessage) msg);
-                ctx.close();
             }
 
             case "join" -> {
                 insertNode((JoinMessage) msg);
-                ctx.close();
             }
 
             case "neighbour" -> {
-
                 String[] tokens = msg.getMessageContent().split(":");
                 String direction = tokens[0];
                 int ringLvl = Integer.parseInt(tokens[1]);
@@ -349,10 +378,9 @@ public class PeerService {
                 } else {
                     head.setAnticlockwiseNeighbour(ringLvl, msg.getSourceNode());
                 }
-                ctx.close();
             }
         }
-
+        ctx.close();
     }
 
 }
