@@ -13,13 +13,13 @@ public class RTreeTests {
     @Test
     void SampleTest1() {
         RTree<Entry> tree = new RTree<>(2, 1, 2);
-        tree.insert(new Entry(new Double[]{5.0, 5.0}));
-        tree.insert(new Entry(new Double[]{9.0, 9.0}));
-        tree.insert(new Entry(new Double[]{7.0, 10.0}));
-        tree.insert(new Entry(new Double[]{5.0, 11.0}));
+        tree.insert(new Entry(5.0, 5.0));
+        tree.insert(new Entry(9.0, 9.0));
+        tree.insert(new Entry(7.0, 10.0));
+        tree.insert(new Entry(5.0, 11.0));
         System.out.println();
         System.out.println(displayRTree(tree.getRoot(), 6));
-        tree.delete(new Entry(new Double[]{7.0, 10.0}));
+        tree.delete(new Entry(7.0, 10.0));
         System.out.println(displayRTree(tree.getRoot(), 3));
     }
 
@@ -30,10 +30,10 @@ public class RTreeTests {
     void SearchTest() { // Test 3 in our report btw
         RTree<Entry> tree = new RTree<>(2, 1, 2);
         Entry[] entries = new Entry[]{
-            new Entry(new Double[]{5.0, 5.0}),
-            new Entry(new Double[]{9.0, 9.0}),
-            new Entry(new Double[]{7.0, 10.0}),
-            new Entry(new Double[]{5.0, 11.0})
+                new Entry(5.0, 5.0),
+                new Entry(9.0, 9.0),
+                new Entry(7.0, 10.0),
+                new Entry(5.0, 11.0)
         };
 
         for (Entry e: entries) tree.insert(e);
@@ -49,6 +49,46 @@ public class RTreeTests {
 
         // Assert checker
         assertArrayEquals(result.toArray(), entries);
+    }
+
+    /**
+     * Should return everything as it covers all possible coordinates
+     */
+    @Test
+    void GenericTest() { // A test to confirm that insertion, deletion and search works in general
+        int T = 10; // Number of Trials
+        int N = 10; // Number of random entries test
+
+        while (T-- > 0) { // For each trial
+
+            // Create a new tree
+            RTree<Entry> tree = new RTree<>((int) (Math.random() * 8) + 2, 1, 2);
+
+            ArrayList<Entry> entries = new ArrayList<>();
+            for (int i = 0; i < N; ++i) entries.add(new Entry(Math.random(), Math.random()));
+
+            for (Entry e : entries) tree.insert(e);
+
+            Double[] inputs = new Double[]{Math.random(), Math.random(),Math.random(), Math.random()};
+            Arrays.sort(inputs);
+
+            Range[] query = new Range[]{
+                    new Range(inputs[0], inputs[2]),
+                    new Range(inputs[1], inputs[3])
+            };
+
+            List<Entry> result = tree.search(query);
+
+            // Manually filter out the entries not in range
+            entries.removeIf(e -> !RTreeNode.isInRange(query, e.getParamValues()));
+
+            // Sorting both of them using the same function to make comparison fair
+            result.sort((a, b) -> (int) (!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
+            entries.sort((a, b) -> (int) (!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
+
+            // Assert checker
+            assertArrayEquals(result.toArray(), entries.toArray());
+        }
     }
 
     public static String displayRTree(RTreeNode root, int count) {
@@ -95,9 +135,7 @@ public class RTreeTests {
 class Entry implements RTreeEntry {
     Double[] coords;
 
-    public Entry(Double[] coords) {
-        this.coords = coords;
-    }
+    public Entry(Double... coords) {this.coords = coords;}
 
     @Override
     public Double[] getParamValues() {
