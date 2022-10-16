@@ -34,6 +34,9 @@ public class ConnectionService {
 
     private PeerService ps;
 
+    private NioEventLoopGroup bossGroup;
+    private NioEventLoopGroup workerGroup;
+
     public ConnectionService(PeerService ps, int port) throws InterruptedException {
         this.ps = ps;
         startServer(port, ps);
@@ -43,8 +46,8 @@ public class ConnectionService {
         ChannelFuture closeFuture = null;
         try {
             final SslContext sslCtx = ServerUtil.buildSslContext();
-            EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-            EventLoopGroup workerGroup = new NioEventLoopGroup();
+            this.bossGroup = new NioEventLoopGroup(1);
+            this.workerGroup = new NioEventLoopGroup();
             try {
                 ServerBootstrap b = new ServerBootstrap();
                 b.group(bossGroup, workerGroup)
@@ -83,6 +86,12 @@ public class ConnectionService {
             throw new RuntimeException(e);
         }
         return closeFuture;
+    }
+
+    public void stopServer(){
+        // wah... so graceful...
+        bossGroup.shutdownGracefully();
+        workerGroup.shutdownGracefully();
     }
 
     public void sendMessage(Message message, Connection connection){

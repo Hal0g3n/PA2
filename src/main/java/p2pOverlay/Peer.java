@@ -93,4 +93,21 @@ public class Peer {
         this.numericID = numericID;
     }
 
+    public String routeTableString() {
+        StringBuilder string = new StringBuilder("Level | Clockwise | AntiClockwise");
+        for (int i = 0; i < routeTable[0].size(); i++) {
+            Connection clockwise = routeTable[0].get(i);
+            Connection antiClockwise = routeTable[1].get(i);
+            string.append("\n").append(String.format("%d | %s,%s | %s,%s",
+                    i,
+                    Encoding.bitSetToString(clockwise.getNumericID()),
+                    clockwise.getAddress(),
+                    Encoding.bitSetToString(antiClockwise.getNumericID()),
+                    antiClockwise.getAddress()
+            ));
+        }
+
+        return string.toString();
+    }
+
 }

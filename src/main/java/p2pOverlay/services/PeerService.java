@@ -71,14 +71,12 @@ public class PeerService {
     }
 
 
-    // this function is for peerID, not numericID
     public static int commonPrefixLen(BitSet a, BitSet b) {
-        int maxLength = Math.max(a.length(), b.length());
 
-        for (int i = maxLength - 1; i >= 0; i--) {
-            if (a.get(i) != b.get(i)) return maxLength - i - 1;
+        for(int i = 0; i < NUMERIC_ID_LEN; i++){
+            if(a.get(i) != b.get(i)) return i;
         }
-        return a.length();
+        return NUMERIC_ID_LEN;
     }
 
     public void startService() {
@@ -89,6 +87,41 @@ public class PeerService {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void stopService(){
+        // before we can stop the service, we first have to inform all our friends
+        // on the routeTable that I'm no longer here and driving a wedge
+        // between their loving relationship :(
+
+        // for each ringLvl, tell the clockwise to set your current anticlockwise as neighbour
+        // similarly do the same to the anticlockwise
+
+        for(int i = 0; i < NUMERIC_ID_LEN; i++){
+            Connection clockwise = head.getClockwiseNeighbour(i);
+            Connection anticlockwise = head.getAnticlockwiseNeighbour(i);
+            if(clockwise != null && anticlockwise != null){
+
+                Message becomeNeighbour;
+
+                // informing the clockwise
+                becomeNeighbour = new Message(
+                    clockwise,
+                        String.format("clockwise:%d", i),
+                        "neighbour"
+                );
+                connectionService.sendMessage(becomeNeighbour, anticlockwise);
+
+                // informing the anticlockwise
+                becomeNeighbour = new Message(
+                        anticlockwise,
+                        String.format("anticlockwise:%d", i),
+                        "neighbour"
+                );
+                connectionService.sendMessage(becomeNeighbour, clockwise);
+            }
+        }
+        connectionService.stopServer();
     }
 
     public void register() {
@@ -132,12 +165,14 @@ public class PeerService {
 
         if(msg.getStartNode() != null){
             System.out.printf("Source node is no longer null, %s == %s?\n",
-                Encoding.bitSetToString(head.getNumericID()),
-                    Encoding.bitSetToString(msg.getStartNode().getNumericID())
+                Encoding.bitSetToString(head.getNumericID(), NUMERIC_ID_LEN),
+                    Encoding.bitSetToString(msg.getStartNode().getNumericID(), NUMERIC_ID_LEN)
             );
         if(head.getNumericID().equals(msg.getStartNode().getNumericID())){
             // we just went in a loop!
             // we have finished this ring, so we should be good
+
+            System.out.println("We went in a loop, dammit! Sending back to the best node");
             msg.setFinalDestination(true);
             connectionService.sendMessage(msg, msg.getBestNode());
             return;
@@ -146,8 +181,8 @@ public class PeerService {
         int height = commonPrefixLen(msg.getDestId(), head.getNumericID());
 
         System.out.printf("The common prefix length between %s and %s is %d\n",
-                Encoding.bitSetToString(msg.getDestId()),
-                Encoding.bitSetToString(head.getNumericID()),
+                Encoding.bitSetToString(msg.getDestId(), NUMERIC_ID_LEN),
+                Encoding.bitSetToString(head.getNumericID(), NUMERIC_ID_LEN),
                 height);
 
         if(height > msg.getRingLevel()){
@@ -168,6 +203,13 @@ public class PeerService {
         }}
 
         Connection nextPeer = head.getClockwiseNeighbour(msg.getRingLevel());
+
+        if(nextPeer == null) // well, we're working with an empty ring
+        {
+            head.setClockwiseNeighbour(msg.getRingLevel(), selfConnection);
+            head.setAnticlockwiseNeighbour(msg.getRingLevel(), selfConnection);
+            nextPeer = head.getClockwiseNeighbour(msg.getRingLevel());
+        }
         System.out.printf("Forwarding along the ring to Peer %d @ %s, see ya\n", nextPeer.getPeerNum(), nextPeer.getAddress());
         connectionService.sendMessage(msg, nextPeer);
         return;
@@ -210,6 +252,11 @@ public class PeerService {
         while(joinMessage.getRingLvl() >= 0){
             // keep going lower
             Connection clockwise = head.getClockwiseNeighbour(joinMessage.getRingLvl());
+            if(clockwise!=null){
+                System.out.printf("We are trying to do an insert of %d [%d] %d\n", head.getPeerNumber(),
+                        joinMessage.getJoiningNode().getPeerNum(),
+                        clockwise.getPeerNum());
+            }
             // if it is null, this means that it's free
             if(clockwise == null || // there should be a short circuit
                     // if not, then make sure that it lies between
@@ -219,6 +266,9 @@ public class PeerService {
                         clockwise.getPeerNum()
                 )
             ){
+
+
+
                 int ringLvl = joinMessage.getRingLvl();
                 joinMessage.setRingAnticlockwise(ringLvl, selfConnection);
 
@@ -270,7 +320,12 @@ public class PeerService {
     }
 
     private boolean liesBetween(int a, int b, int c){
-        if(a < b && b < c) return true;
+
+        if(c == 0){
+            if(a < b) return true;
+        }
+        if(a < b && b < c || a > b && b > c) return true;
+
         return a == c;
     }
 
@@ -292,34 +347,29 @@ public class PeerService {
                         String.format("%d %d", peerNumberCounter, numID),
                         "assignedNum");
                 ctx.writeAndFlush(responseMsg);
-                ctx.close(); // seems like CTX is blocking...
             }
 
             case "assignedNum" -> {
-
                 // I received a numericID from the gateway
                 // messageContent = peerNumber numID
                 String[] tokens = msg.getMessageContent().split(" ");
                 this.selfConnection.setNumericID(Encoding.intToBitSet(Integer.parseInt(tokens[1]), NUMERIC_ID_LEN));
+                this.head.setNumericID(Encoding.intToBitSet(Integer.parseInt(tokens[1]), NUMERIC_ID_LEN));
                 this.head.setPeerNumber(Integer.parseInt(tokens[0]));
                 this.selfConnection.setPeerNum(Integer.parseInt(tokens[0]));
                 // now that I have a numericID, I need to insert myself into the skipgraph
                 System.out.printf("Peer registration complete with assigned IDs %s %s\n", tokens[0], tokens[1]);
-                ctx.close();
             }
 
             case "routing" -> {
                 routeByNumericID((RouteMessage) msg);
-                ctx.close();
             }
 
             case "join" -> {
                 insertNode((JoinMessage) msg);
-                ctx.close();
             }
 
             case "neighbour" -> {
-
                 String[] tokens = msg.getMessageContent().split(":");
                 String direction = tokens[0];
                 int ringLvl = Integer.parseInt(tokens[1]);
@@ -328,10 +378,9 @@ public class PeerService {
                 } else {
                     head.setAnticlockwiseNeighbour(ringLvl, msg.getSourceNode());
                 }
-                ctx.close();
             }
         }
-
+        ctx.close();
     }
 
 }
