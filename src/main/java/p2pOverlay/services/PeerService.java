@@ -120,8 +120,10 @@ public class PeerService {
 
     private void routeByNumericID(RouteMessage msg){
 
-        if(head.getNumericID() == msg.getDestId() || msg.isFinalDestination()){
+        System.out.println("Well, it looks like I need to route a message!!");
 
+        if(head.getNumericID() == msg.getDestId() || msg.isFinalDestination()){
+            System.out.println("Looks like I'm the intended peer for this message. On to processing!");
             // if you have the correct numericId, then you should get the message
             // that or you're the closest as can be
             handleMessage(msg);
@@ -129,16 +131,29 @@ public class PeerService {
         }
 
         if(msg.getSourceNode() != null){
-        if(head.getNumericID() == msg.getSourceNode().getNumericID()){
+            System.out.printf("Source node is no longer null, %s == %s?\n",
+                Encoding.bitSetToString(head.getNumericID()),
+                    Encoding.bitSetToString(msg.getSourceNode().getNumericID())
+            );
+        if(head.getNumericID().equals(msg.getSourceNode().getNumericID())){
             // we just went in a loop!
-            // we have finished this ring, so we go to the next ring
+            // we have finished this ring, so we should be good
             msg.setFinalDestination(true);
             connectionService.sendMessage(msg, msg.getBestNode());
             return;
         }}
 
         int height = commonPrefixLen(msg.getDestId(), head.getNumericID());
+
+        System.out.printf("The common prefix length between %s and %s is %d\n",
+                Encoding.bitSetToString(msg.getDestId()),
+                Encoding.bitSetToString(head.getNumericID()),
+                height);
+
         if(height > msg.getRingLevel()){
+
+            System.out.println("Since height is greater, we're going up");
+
             msg.setRingLevel(height);
             msg.setSourceNode(selfConnection);
             msg.setBestNode(selfConnection);
@@ -153,6 +168,7 @@ public class PeerService {
         }}
 
         Connection nextPeer = head.getClockwiseNeighbour(msg.getRingLevel());
+        System.out.printf("Forwarding along the ring to Peer %d @ %s, see ya\n", nextPeer.getPeerNum(), nextPeer.getAddress());
         connectionService.sendMessage(msg, nextPeer);
         return;
     }
@@ -219,7 +235,8 @@ public class PeerService {
                 )
             ){
                 joinMessage.setRingAnticlockwise(joinMessage.getRingLvl(), selfConnection);
-                joinMessage.setRingClockwise(joinMessage.getRingLvl(), clockwise);
+                if(clockwise != null) joinMessage.setRingClockwise(joinMessage.getRingLvl(), clockwise);
+                else joinMessage.setRingClockwise(joinMessage.getRingLvl(), selfConnection);
                 joinMessage.setRingLvl(joinMessage.getRingLvl()-1);
             } else {
                 connectionService.sendMessage(joinMessage, clockwise); // hand it over to the next
@@ -246,8 +263,8 @@ public class PeerService {
             case "register" -> {
                 // we need to give the peer its peerNumber and numericID
                 peerNumberCounter++;
-                int numID = ThreadLocalRandom.current().nextInt(0, 1 << NUMERIC_ID_LEN + 1);
-                while(usedId.containsKey(numID)) numID = ThreadLocalRandom.current().nextInt(0, 1 << NUMERIC_ID_LEN + 1);
+                int numID = ThreadLocalRandom.current().nextInt(0, (1 << NUMERIC_ID_LEN) + 1);
+                while(usedId.containsKey(numID)) numID = ThreadLocalRandom.current().nextInt(0, (1 << NUMERIC_ID_LEN) + 1);
                 usedId.put(numID, true);
                 System.out.printf("Received a registration, assigning IDs %d %d\n", peerNumberCounter, numID);
                 Message responseMsg = new Message(selfConnection,

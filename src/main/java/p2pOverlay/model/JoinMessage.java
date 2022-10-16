@@ -20,7 +20,7 @@ public class JoinMessage extends Message {
         this.ringClockwise = new ArrayList<>();
         this.ringAnticlockwise = new ArrayList<>();
 
-        for(int i = 0; i < ringLvl; i++){
+        for(int i = 0; i <= ringLvl; i++){
             ringClockwise.add(null);
             ringAnticlockwise.add(null);
         }
