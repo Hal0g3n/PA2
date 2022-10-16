@@ -1,4 +1,6 @@
-package p2pOverlay.model;
+package p2pOverlay.model.message;
+
+import p2pOverlay.model.Connection;
 
 import java.util.BitSet;
 

@@ -49,7 +49,22 @@ public class TempMain {
                 throw new RuntimeException(e);
             }
         } else {
-            System.out.print("You are GATEWAY, just chill");
+            System.out.print("===[Gateway Node]===\n" +
+                    "Available commands:\n" +
+                    "1. Print routeTable (print)\n" +
+                    "2. Leave skipgaph (leave)");
+            try{
+                while((line = userInput.readLine()) != null){
+                    String[] tokens = line.split(" ");
+                    System.out.println("Command recognised as: " + tokens[0]);
+                    switch(tokens[0]){
+                        case "print" -> ps.printRouteTable();
+                        case "leave" -> ps.stopService();
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

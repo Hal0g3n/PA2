@@ -20,19 +20,17 @@ public class Peer {
     private BitSet numericID;
 
     // temp arraylist for testing
-    private final ArrayList<Connection> knownConnections;
+
     private ArrayList<Integer> loadWavelet;
 
     public Peer(BitSet peerID, ArrayList<Connection> clockwise, ArrayList<Connection> antiClockwise) {
         this.peerID = peerID;
         this.clockwise = clockwise;
         this.antiClockwise = antiClockwise;
-
+        this.load = 0;
         routeTable = new ArrayList[]{clockwise, antiClockwise};
 
         // routeTable[ 0 (clockwise) / 1 (anticlockwise) ][ringLvl]
-
-        this.knownConnections = new ArrayList<>();
     }
     public Peer(BitSet peerID) {
         this(peerID, new ArrayList<>(), new ArrayList<>());
@@ -74,10 +72,12 @@ public class Peer {
         else routeTable[1].set(ringLvl, neighbour);
     }
 
-    public void setPeerID(int peerID){this.peerID = BitSet.valueOf(new long[] {peerID});}
+    public void setPeerID(int peerID, int nLen){this.peerID = Encoding.intToBitSet(peerID, nLen);}
     public void setId(String id) {
         this.peerID = Encoding.stringToBitSet(id);
     }
+
+    public BitSet getPeerID(){return peerID;}
 
     public void updateTable(int h, Connection clockwiseNeighbour, Connection antiClockwiseNeighbour) {
         clockwise.set(h, clockwiseNeighbour);
@@ -110,4 +110,11 @@ public class Peer {
         return string.toString();
     }
 
+    public int getLoad() {
+        return load;
+    }
+
+    public void setLoad(int load) {
+        this.load = load;
+    }
 }

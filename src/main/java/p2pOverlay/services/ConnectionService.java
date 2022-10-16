@@ -16,7 +16,7 @@ import io.netty.handler.ssl.SslContext;
 import p2pOverlay.handlers.ConnectionClientHandler;
 import p2pOverlay.handlers.ConnectionServerHandler;
 import p2pOverlay.model.Connection;
-import p2pOverlay.model.Message;
+import p2pOverlay.model.message.Message;
 import p2pOverlay.util.ServerUtil;
 
 import javax.net.ssl.SSLException;

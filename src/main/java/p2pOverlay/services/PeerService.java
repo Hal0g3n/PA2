@@ -3,9 +3,9 @@ package p2pOverlay.services;
 import io.netty.channel.ChannelHandlerContext;
 import p2pOverlay.Peer;
 import p2pOverlay.model.Connection;
-import p2pOverlay.model.JoinMessage;
-import p2pOverlay.model.Message;
-import p2pOverlay.model.RouteMessage;
+import p2pOverlay.model.message.JoinMessage;
+import p2pOverlay.model.message.Message;
+import p2pOverlay.model.message.RouteMessage;
 import p2pOverlay.util.Encoding;
 
 import java.net.InetSocketAddress;
@@ -28,7 +28,7 @@ public class PeerService {
     private Peer head;
     private ConnectionService connectionService;
     private int port;
-
+    private int treeHeight;
 
     private int peerNumberCounter;
     private Connection selfConnection;
@@ -39,6 +39,7 @@ public class PeerService {
     public PeerService(int port) {
         this.head = new Peer();
         this.port = port;
+        this.treeHeight = 0;
         this.selfConnection = new Connection(
                 0,
                 new BitSet(NUMERIC_ID_LEN),
@@ -54,7 +55,8 @@ public class PeerService {
             // this is the gateway node, and will always be the first one in the network
             // this is for simulation purposes, after all
 
-            head.setPeerID(0);
+            // also, as the first node, it will always hold the leftmost node
+            head.setPeerID(0, treeHeight);
             head.setNumericID(Encoding.intToBitSet(0, NUMERIC_ID_LEN));
             selfConnection.setPeerNum(0);
             selfConnection.setNumericID(Encoding.intToBitSet(0, NUMERIC_ID_LEN));
@@ -382,6 +384,15 @@ public class PeerService {
                 } else {
                     head.setAnticlockwiseNeighbour(ringLvl, msg.getSourceNode());
                 }
+            }
+
+            case "getPeerID" -> {
+                System.out.println("Received request for my peerID");
+                Message responseMsg = new Message(selfConnection,
+                        String.format("%d %d", peerNumberCounter, Encoding.BitSetToInt(head.getPeerID())),
+                        "retPeerID"
+                        );
+                ctx.writeAndFlush(responseMsg);
             }
         }
         ctx.close();

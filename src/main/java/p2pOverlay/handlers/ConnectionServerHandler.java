@@ -3,7 +3,7 @@ package p2pOverlay.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import p2pOverlay.model.Message;
+import p2pOverlay.model.message.Message;
 import p2pOverlay.services.PeerService;
 
 public class ConnectionServerHandler extends SimpleChannelInboundHandler {

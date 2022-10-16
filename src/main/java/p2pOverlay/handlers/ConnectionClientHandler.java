@@ -4,7 +4,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import p2pOverlay.model.Message;
+import p2pOverlay.model.message.Message;
 import p2pOverlay.services.PeerService;
 
 public class ConnectionClientHandler extends SimpleChannelInboundHandler<Object> {
