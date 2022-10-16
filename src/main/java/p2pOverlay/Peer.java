@@ -62,6 +62,14 @@ public class Peer {
         return routeTable[0].get(ringLvl);
     }
 
+    public void setClockwiseNeighbour(int ringLvl, Connection neighbour){
+        routeTable[0].set(ringLvl, neighbour);
+    }
+
+    public void setAnticlockwiseNeighbour(int ringLvl, Connection neighbour){
+        routeTable[1].set(ringLvl, neighbour);
+    }
+
     public void setPeerID(int peerID){this.peerID = BitSet.valueOf(new long[] {peerID});}
     public void setId(String id) {
         this.peerID = Encoding.stringToBitSet(id);

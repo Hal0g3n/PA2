@@ -4,5 +4,5 @@ import java.io.Serializable
 import java.net.InetSocketAddress
 import java.util.BitSet;
 
-data class Connection(var numericID : BitSet, var address : InetSocketAddress) : Serializable {
+data class Connection(var peerNum : Int, var numericID : BitSet, var address : InetSocketAddress) : Serializable {
 }

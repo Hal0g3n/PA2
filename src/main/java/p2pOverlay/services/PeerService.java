@@ -1,9 +1,9 @@
 package p2pOverlay.services;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import p2pOverlay.Peer;
 import p2pOverlay.model.Connection;
+import p2pOverlay.model.JoinMessage;
 import p2pOverlay.model.Message;
 import p2pOverlay.model.RouteMessage;
 import p2pOverlay.util.Encoding;
@@ -39,12 +39,29 @@ public class PeerService {
     public PeerService(int port) {
         this.head = new Peer();
         this.port = port;
-        this.selfConnection = new Connection(new BitSet(NUMERIC_ID_LEN),
+        this.selfConnection = new Connection(
+                0,
+                new BitSet(NUMERIC_ID_LEN),
                 new InetSocketAddress("127.0.0.1", port)
                 );
+        for(int i = 0; i < NUMERIC_ID_LEN; i++){
+            head.setAnticlockwiseNeighbour(i, null);
+            head.setClockwiseNeighbour(i, null);
+        }
+
         if (this.port == 8080) {
             // this is the gateway node, and will always be the first one in the network
             // this is for simulation purposes, after all
+
+            head.setPeerID(0);
+            head.setNumericID(Encoding.intToBitSet(0, NUMERIC_ID_LEN));
+            selfConnection.setPeerNum(0);
+            selfConnection.setNumericID(Encoding.intToBitSet(0, NUMERIC_ID_LEN));
+            usedId.put(0, true);
+
+            head.setClockwiseNeighbour(0, selfConnection);
+            head.setAnticlockwiseNeighbour(0, selfConnection);
+            // currently only root ring exists with gateway there
 
         }
         this.peerNumberCounter = 0;
@@ -86,63 +103,118 @@ public class PeerService {
         connectionService.sendMessage(registrationMsg, "127.0.01", 8080);
     }
 
-    public void insertNode(int numericId){
-
-
+    public void requestInsertion(){
+        RouteMessage insertionMsg = new RouteMessage(
+                selfConnection,
+                "insertion",
+                "routing",
+                selfConnection.getNumericID(),
+                null,
+                null,
+                -1,
+                false
+        );
+        connectionService.sendMessage(insertionMsg, "127.0.01", 8080);
     }
 
     private void routeByNumericID(RouteMessage msg){
 
-        if(head.getNumericID() == msg.getDestId()){
+        if(head.getNumericID() == msg.getDestId() || msg.isFinalDestination()){
 
             // if you have the correct numericId, then you should get the message
+            // that or you're the closest as can be
             // the message should be arbitrary
+            handleMessage(msg);
             return;
         }
 
+        if(msg.getSourceNode() != null){
         if(head.getNumericID() == msg.getSourceNode().getNumericID()){
             // we just went in a loop!
             // we have finished this ring, so we go to the next ring
             msg.setFinalDestination(true);
             connectionService.sendMessage(msg, msg.getBestNode());
             return;
-        }
+        }}
 
-        int height = commonPrefixLen(msg.getSourceNode().getNumericID(), head.getNumericID());
+        int height = commonPrefixLen(msg.getDestId(), head.getNumericID());
         if(height > msg.getRingLevel()){
             msg.setRingLevel(height);
             msg.setSourceNode(selfConnection);
             msg.setBestNode(selfConnection);
-        } else if ( Math.abs(
+        } else if(msg.getBestNode() != null)
+        {if ( Math.abs(
                 Encoding.BitSetToInt(selfConnection.getNumericID())
-                - Encoding.BitSetToInt(msg.getSourceNode().getNumericID())
+                - Encoding.BitSetToInt(msg.getDestId())
         ) < Math.abs(
                 Encoding.BitSetToInt(msg.getBestNode().getNumericID())
-                        - Encoding.BitSetToInt(msg.getSourceNode().getNumericID()) )){
+                        - Encoding.BitSetToInt(msg.getDestId()) )){
             msg.setBestNode(selfConnection);
-        }
+        }}
 
         Connection nextPeer = head.getClockwiseNeighbour(msg.getRingLevel());
         connectionService.sendMessage(msg, nextPeer);
         return;
     }
 
+    private void handleMessage(Message msg){
+        String msgContent = msg.getMessageContent();
+        switch (msgContent){
+            case "insertion" -> {
 
-    public void sendMsg(int targetId, String message) {
-        // ok so basically right now we only relay messages to the gateway
-        // but in the future, each peer would also store some connections which it knows the peerId of
-        // and it that case, it fills in the port of that peerId as opposed to gateway
-
-        System.out.println("Attempting ping");
-        sendMsg(head.getLongId(), targetId, message, "127.0.0.1", 8080);
+                // the peer which receives "insertion" is the """Gateway""" for it
+                // it will start sending the join message to its friends
+                Connection joiningNode = msg.getSourceNode();
+                JoinMessage joinMessage = new JoinMessage(
+                        selfConnection,
+                        "join",
+                        "join",
+                        false,
+                        joiningNode,
+                        // in this case, the numID of source is where we want to insert it
+                        commonPrefixLen(selfConnection.getNumericID(), msg.getSourceNode().getNumericID())
+                );
+                insertNode(joinMessage);
+            }
+        }
     }
 
-    private void sendMsg(long sourceId, int targetId, String message, String ip, int port) {
-        //connectionService.sendMessage(String.format("ping %d %d %d %s", sourceId, head.getLongId(), targetId, message), ip, port);
+    private void insertNode(JoinMessage joinMessage){
+        if(joinMessage.isPerformInsertions()){
+            // crap goes here
+        }
+
+        while(joinMessage.getRingLvl() >= 0){
+            // keep going lower
+            Connection clockwise = head.getClockwiseNeighbour(joinMessage.getRingLvl());
+            // if it is null, this means that it's free
+            if(clockwise == null || // there should be a short circuit
+                    // if not, then make sure that it lies between
+                liesBetween(
+                        joinMessage.getJoiningNode().getPeerNum(),
+                        head.getPeerNumber(),
+                        clockwise.getPeerNum()
+                )
+            ){
+                joinMessage.setRingAnticlockwise(joinMessage.getRingLvl(), selfConnection);
+                joinMessage.setRingClockwise(joinMessage.getRingLvl(), clockwise);
+                joinMessage.setRingLvl(joinMessage.getRingLvl()-1);
+            } else {
+                connectionService.sendMessage(joinMessage, clockwise); // hand it over to the next
+                return;
+            }
+        }
+
+        joinMessage.setPerformInsertions(true);
+        connectionService.sendMessage(joinMessage, joinMessage.getJoiningNode());
     }
 
-    public void handleMessage(ChannelHandlerContext ctx, Message msg) {
+    private boolean liesBetween(int a, int b, int c){
+        if(a < b && b < c) return true;
+        return a == c;
+    }
 
+    public void handleImmediateMessage(ChannelHandlerContext ctx, Message msg) {
 
         String msgCommand = msg.getMessageCommand();
 
@@ -151,11 +223,8 @@ public class PeerService {
         //String[] tokens = msg.split(" ");
         //System.out.println(Arrays.toString(tokens));
 
-
         switch (msgCommand) {
             case "register" -> {
-                // incoming registration, thus i am the gateway
-                head.setPeerID(0);
                 // we need to give the peer its peerNumber and numericID
                 peerNumberCounter++;
                 int numID = ThreadLocalRandom.current().nextInt(0, 1 << NUMERIC_ID_LEN + 1);
@@ -172,17 +241,18 @@ public class PeerService {
             case "assignedNum" -> {
 
                 // I received a numericID from the gateway
-
                 // messageContent = peerNumber numID
                 String[] tokens = msg.getMessageContent().split(" ");
                 this.selfConnection.setNumericID(Encoding.intToBitSet(Integer.parseInt(tokens[1]), NUMERIC_ID_LEN));
                 this.head.setPeerNumber(Integer.parseInt(tokens[0]));
+                this.selfConnection.setPeerNum(Integer.parseInt(tokens[0]));
                 // now that I have a numericID, I need to insert myself into the skipgraph
                 System.out.printf("Peer registration complete with assigned IDs %s %s\n", tokens[0], tokens[1]);
             }
 
             case "routing" -> routeByNumericID((RouteMessage) msg);
 
+            case "join" -> insertNode((JoinMessage) msg);
         }
 
     }
