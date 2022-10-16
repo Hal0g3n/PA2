@@ -14,20 +14,17 @@ public class ConnectionServerHandler extends SimpleChannelInboundHandler {
     public ConnectionServerHandler(PeerService ps){
         this.constructedMessage = "";
         this.ps = ps;
-        // msgQueue as string for now, have to shift to message later
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-        //String receivedMsg = ((ByteBuf) msg).toString(CharsetUtil.US_ASCII);
+        // when a message is received, we forward it over to PeerService
         Message receivedMsg = (Message) msg;
         System.out.printf("Received %s\n", receivedMsg.getMessageContent());
         ps.handleImmediateMessage(ctx, receivedMsg);
         this.constructedMessage = "";
         System.out.printf("%s\n", ctx.channel().remoteAddress());
-//        ByteBuf out = ctx.alloc().buffer(receivedMsg.length()*2);
-//        out.writeBytes(Encoding.str_to_bb(receivedMsg));
-//        ctx.writeAndFlush(out);
+
     }
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
