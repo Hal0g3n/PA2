@@ -1,4 +1,3 @@
 package p2pOverlay;
 
-public class SimulationMain {
-}
+public class SimulationMain {}
