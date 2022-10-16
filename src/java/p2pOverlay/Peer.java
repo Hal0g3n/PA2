@@ -1,6 +1,5 @@
 package p2pOverlay;
 
-import p2pOverlay.services.PeerService;
 import p2pOverlay.model.Connection;
 import p2pOverlay.util.Encoding;
 

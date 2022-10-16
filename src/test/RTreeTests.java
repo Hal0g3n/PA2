@@ -33,7 +33,7 @@ public class RTreeTests {
         // Ensures deletion works here before the bad deletion test
         // Checks if a full query will return 5 instead of 6 elements
         tree.delete(entries.get(4));
-        assertEquals(tree.search(new Range[]{new Range<Double>(0.0, 10.0), new Range<Double>(0.0, 10.1)}).size(), 5, "答案不对，你死定了");
+        assertEquals(tree.search(new Range[]{new Range<>(0.0, 10.0), new Range<>(0.0, 10.1)}).size(), 5, "答案不对，你死定了");
 
         // Ensures Bad deletion is met with exception
         assertThrows(Exception.class, () -> tree.delete(new Entry(0.0, 0.0)));

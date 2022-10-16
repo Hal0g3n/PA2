@@ -125,7 +125,6 @@ public class RTree<T extends RTreeEntry> {
     /**
      * Called to propagate the deletion of a node
      * @param node - The GhostNode to delete
-     * @return
      */
     public boolean delete(GhostNode<T> node) {
         if (node.getRanges().length != numDims) throw new IllegalArgumentException("输入的范围大小不对");

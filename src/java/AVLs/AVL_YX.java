@@ -154,9 +154,9 @@ public class AVL_YX<T extends Comparable<? super T>> {
         if (curr == null) return null;
         int compareRes = item.compareTo(curr.getItem());
         if (compareRes < 0)
-            return (T) find(item, curr.neighbours[0]);
+            return find(item, curr.neighbours[0]);
         else if (compareRes > 0)
-            return (T) find(item, curr.neighbours[1]);
+            return find(item, curr.neighbours[1]);
         else
             return curr.getItem();
     }

@@ -47,39 +47,35 @@ public class ConnectionService {
             final SslContext sslCtx = ServerUtil.buildSslContext();
             this.bossGroup = new NioEventLoopGroup(1);
             this.workerGroup = new NioEventLoopGroup();
-            try {
-                ServerBootstrap b = new ServerBootstrap();
-                b.group(bossGroup, workerGroup)
-                        .channel(NioServerSocketChannel.class)
-                        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
-                        .option(ChannelOption.SO_KEEPALIVE, true)
-                        .option(ChannelOption.SO_BACKLOG, 100)
-                        .handler(new LoggingHandler(LogLevel.INFO))
-                        .childHandler(new ChannelInitializer<SocketChannel>() {
-                            @Override
-                            public void initChannel(SocketChannel ch) {
-                                ChannelPipeline p = ch.pipeline();
-                                if (sslCtx != null) {
-                                    p.addLast(sslCtx.newHandler(ch.alloc()));
-                                }
-                                p.addLast(
-                                        new ObjectEncoder(),
-                                        new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-                                        new ConnectionServerHandler(ps)
-                                );
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
+                    .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
+                    .option(ChannelOption.SO_KEEPALIVE, true)
+                    .option(ChannelOption.SO_BACKLOG, 100)
+                    .handler(new LoggingHandler(LogLevel.INFO))
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) {
+                            ChannelPipeline p = ch.pipeline();
+                            if (sslCtx != null) {
+                                p.addLast(sslCtx.newHandler(ch.alloc()));
                             }
-                        });
+                            p.addLast(
+                                    new ObjectEncoder(),
+                                    new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
+                                    new ConnectionServerHandler(ps)
+                            );
+                        }
+                    });
 
-                // Bind and start to accept incoming connections.
-                final ChannelFuture bindFuture = b.bind(port).sync();
+            // Bind and start to accept incoming connections.
+            final ChannelFuture bindFuture = b.bind(port).sync();
 
-                if(bindFuture.isSuccess()){
-                    System.out.printf("Server bound on localhost:%d\n",port);
-                    final Channel serverChannel = bindFuture.channel();
-                    closeFuture = serverChannel.closeFuture();
-                }
-            } finally {
-
+            if(bindFuture.isSuccess()){
+                System.out.printf("Server bound on localhost:%d\n",port);
+                final Channel serverChannel = bindFuture.channel();
+                closeFuture = serverChannel.closeFuture();
             }
         } catch (CertificateException | SSLException e) {
             throw new RuntimeException(e);

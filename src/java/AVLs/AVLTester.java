@@ -1,7 +1,5 @@
 package AVLs;
 
-import AVLs.AVL_YX;
-
 public class AVLTester {
     public static void main(String[] args) {
         Integer[] arr = {9, 5, 10, 0, 6, 11, -1, 1, 2};

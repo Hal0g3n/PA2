@@ -39,13 +39,13 @@ public class AVL_jun<T extends Comparable<? super T>> {
     public void insert(T item){ root = insert(item, root);  }
     private Node<T> insert(T item, Node<T> curr) {
         // Complete the recursive code for insertion below this comment
-        if (curr == null) return new Node<T>(item, 2); // new node to insert item
+        if (curr == null) return new Node<>(item, 2); // new node to insert item
         // Now we do the regular BST insertion logic where you check left and right
         int neighbourSide = item.compareTo(curr.getItem()) > 0 ? 1 : 0; // get left or right index
         curr.neighbours[neighbourSide] = insert(item, curr.neighbours[neighbourSide]); // insert on whatever side
         // When we call insert we should always give the root of the balanced subtree
         // So if after insertion we get some imbalance we should balance it then the root will propagate up :))
-        return balanceTree((Node<T>) curr);
+        return balanceTree(curr);
     }
 
     // Method to delete an item from an AVL tree
@@ -81,7 +81,7 @@ public class AVL_jun<T extends Comparable<? super T>> {
             int neighbourSide = item.compareTo(curr.getItem()) > 0 ? 1 : 0; // get left or right index
             curr.neighbours[neighbourSide] = delete(item, curr.neighbours[neighbourSide]); // insert on whatever side
         }
-        return balanceTree((Node<T>) curr);
+        return balanceTree(curr);
     }
 
     private Node<T> balanceTree(Node<T> curr) {
@@ -128,9 +128,9 @@ public class AVL_jun<T extends Comparable<? super T>> {
         if (curr == null) return null;
         int compareRes = item.compareTo(curr.getItem());
         if (compareRes < 0)
-            return (T) find(item, curr.neighbours[0]);
+            return find(item, curr.neighbours[0]);
         else if (compareRes > 0)
-            return (T) find(item, curr.neighbours[1]);
+            return find(item, curr.neighbours[1]);
         else
             return curr.getItem();
     }

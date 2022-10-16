@@ -57,7 +57,7 @@ public class AVL_aloysus<T extends Comparable<? super T>> {
     // Recursive auxiliary method utilised to help return the result
     public void insert(T item){ root = insert(item, root); }
     private Node<T> insert(T item, Node<T> curr) {
-        if (curr == null) return new Node<T>(item, 2);
+        if (curr == null) return new Node<>(item, 2);
 
         if (item.compareTo(curr.getItem()) < 0) {
             curr.neighbours[0] = insert(item, curr.neighbours[0]);
@@ -143,9 +143,9 @@ public class AVL_aloysus<T extends Comparable<? super T>> {
         if (curr == null) return null;
         int compareRes = item.compareTo(curr.getItem());
         if (compareRes < 0)
-            return (T) find(item, curr.neighbours[0]);
+            return find(item, curr.neighbours[0]);
         else if (compareRes > 0)
-            return (T) find(item, curr.neighbours[1]);
+            return find(item, curr.neighbours[1]);
         else
             return curr.getItem();
     }

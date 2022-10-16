@@ -40,7 +40,7 @@ public class AVL_PC<T extends Comparable<? super T>> {
     private Node<T> insert(T item, Node<T> curr) {
         // corner case for empty tree
         if (curr == null)
-            return new Node<T>(item, 2);
+            return new Node<>(item, 2);
         // determine insert on left or right
         int insertSide = 0;
         if (((Comparable) item).compareTo(curr.getItem()) > 0) {
@@ -49,21 +49,21 @@ public class AVL_PC<T extends Comparable<? super T>> {
 
         // base case: no nodes on that side
         if (curr.neighbours[insertSide] == null) {
-            curr.neighbours[insertSide] = new Node<T>(item, 2);
+            curr.neighbours[insertSide] = new Node<>(item, 2);
         } else {
             curr.neighbours[insertSide] = insert(item, curr.neighbours[insertSide]);
 
             // rebalancing
             if (getBalance(curr) < -1 || getBalance(curr) > 1) {
                 if (insertSide == 0) {
-                    if (((Comparable) item).compareTo(curr.neighbours[0].getItem()) > 0) {
+                    if (item.compareTo(curr.neighbours[0].getItem()) > 0) {
                         // left-right case
                         curr.neighbours[0] = leftRotate(curr.neighbours[0]);
                     }
                     // left-left case or second rotation of left-right case
                     curr = rightRotate(curr);
                 } else {
-                    if (((Comparable) item).compareTo(curr.neighbours[0].getItem()) <= 0) {
+                    if ((item).compareTo(curr.neighbours[0].getItem()) <= 0) {
                         // right-left case
                         curr.neighbours[1] = rightRotate(curr.neighbours[1]);
                     }
@@ -168,9 +168,9 @@ public class AVL_PC<T extends Comparable<? super T>> {
         if (curr == null) return null;
         int compareRes = item.compareTo(curr.getItem());
         if (compareRes < 0)
-            return (T) find(item, curr.neighbours[0]);
+            return find(item, curr.neighbours[0]);
         else if (compareRes > 0)
-            return (T) find(item, curr.neighbours[1]);
+            return find(item, curr.neighbours[1]);
         else
             return curr.getItem();
     }

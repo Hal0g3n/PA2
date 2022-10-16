@@ -15,7 +15,7 @@ public class TempMain {
 
         String line;
         final BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
-        int PORT_NUMBER = 0;
+        int PORT_NUMBER;
         System.out.print("Specify a port number (temporary implementation): ");
         try {
             PORT_NUMBER = Integer.parseInt(userInput.readLine());
@@ -29,11 +29,12 @@ public class TempMain {
 
         ps.startService();
         if(PORT_NUMBER != GATEWAY_PORT) {
-            System.out.print("Available commands:\n" +
-                    "1. Get peerID (register)\n" +
-                    "2. Join skipgraph (insert)\n" +
-                    "3. Print routeTable (print)\n" +
-                    "4. Leave skipgaph (leave)");
+            System.out.print("""
+                    Available commands:
+                    1. Get peerID (register)
+                    2. Join skipgraph (insert)
+                    3. Print routeTable (print)
+                    4. Leave skipgaph (leave)""");
             try{
                 while((line = userInput.readLine()) != null){
                     String[] tokens = line.split(" ");
@@ -49,10 +50,11 @@ public class TempMain {
                 throw new RuntimeException(e);
             }
         } else {
-            System.out.print("===[Gateway Node]===\n" +
-                    "Available commands:\n" +
-                    "1. Print routeTable (print)\n" +
-                    "2. Leave skipgaph (leave)");
+            System.out.print("""
+                    ===[Gateway Node]===
+                    Available commands:
+                    1. Print routeTable (print)
+                    2. Leave skipgaph (leave)""");
             try{
                 while((line = userInput.readLine()) != null){
                     String[] tokens = line.split(" ");

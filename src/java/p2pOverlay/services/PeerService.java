@@ -1,7 +1,6 @@
 package p2pOverlay.services;
 
 import io.netty.channel.ChannelHandlerContext;
-import p2pOverlay.LanternaMain;
 import p2pOverlay.Peer;
 import p2pOverlay.model.Connection;
 import p2pOverlay.model.message.JoinMessage;
@@ -291,9 +290,7 @@ public class PeerService {
                 );
                 routeByNumericID(routeMessage);
             }
-            case "ACK" -> {
-                onAcknowledge.onAcknowledge(msg.getSourceNode().getNumericID());
-            }
+            case "ACK" -> onAcknowledge.onAcknowledge(msg.getSourceNode().getNumericID());
         }
     }
 
@@ -468,13 +465,9 @@ public class PeerService {
                 System.out.printf("Peer registration complete with assigned IDs %s %s\n", tokens[0], tokens[1]);
             }
 
-            case "routing" -> {
-                routeByNumericID((RouteMessage) msg);
-            }
+            case "routing" -> routeByNumericID((RouteMessage) msg);
 
-            case "join" -> {
-                insertNode((JoinMessage) msg);
-            }
+            case "join" -> insertNode((JoinMessage) msg);
 
             case "neighbour" -> {
                 String[] tokens = msg.getMessageContent().split(":");
@@ -498,9 +491,7 @@ public class PeerService {
                 ctx.writeAndFlush(responseMsg);
             }
 
-            case "balance" -> {
-                loadBalance((LoadBalanceMessage) msg);
-            }
+            case "balance" -> loadBalance((LoadBalanceMessage) msg);
         }
         ctx.close();
     }
