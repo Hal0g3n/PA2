@@ -21,18 +21,14 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         this(item, ranges, true, null);
     }
 
-    public RTreeNode(List<T> item, Range<Double>[] ranges, RTreeNode<T>[] neighbours) {
-        this(item, ranges, false, neighbours[2]);
-        this.neighbours[0] = neighbours[0];
-        this.neighbours[1] = neighbours[1];
-    }
-
     public RTreeNode(List<T> item, Range<Double>[] ranges, boolean leaf, RTreeNode<T> parent) {
         super(item);
         neighbours = new RTreeNode[4];
         neighbours[3] = parent;
         this.leaf = leaf;
         this.ranges = ranges;
+
+        id = new BitSet();
     }
 
     public Range<Double>[] getRanges() {
@@ -175,8 +171,14 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
         // Recompute the number of entries in subtree
         numEntries = item.size();
-        for (int i = 0; i < 2; ++i) if (neighbours[i] != null)
+        for (int i = 0; i < 2; ++i) if (neighbours[i] != null) {
             numEntries += ((RTreeNode<T>) neighbours[i]).numEntries;
+
+            // Update the id of child
+            ((RTreeNode<T>) neighbours[i]).id = new BitSet(id.length() + 1);
+            ((RTreeNode<T>) neighbours[i]).id.or(id);
+            if (i == 1) ((RTreeNode<T>) neighbours[i]).id.set(id.length());
+        }
     }
 
     /**

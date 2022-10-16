@@ -1,13 +1,13 @@
-import model.*;
+import model.RTree;
+import model.RTreeEntry;
+import model.RTreeNode;
 import org.junit.jupiter.api.Test;
-import org.w3c.dom.ranges.Range;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Objects;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RTreeTests {
 
@@ -24,6 +24,7 @@ public class RTreeTests {
         System.out.println(displayRTree(tree.getRoot(), 3));
         assertEquals(10, 10);
     }
+
     public static String displayRTree(RTreeNode root, int count) {
         String result = "";
         LinkedList<Object> queue = new LinkedList<>();
