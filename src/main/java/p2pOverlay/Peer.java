@@ -55,19 +55,23 @@ public class Peer {
     public int getPeerNumber(){ return peerNumber; }
 
     public Connection getAnticlockwiseNeighbour(int ringLvl){
+        if(ringLvl >= routeTable[1].size()) return null;
         return routeTable[1].get(ringLvl);
     }
 
     public Connection getClockwiseNeighbour(int ringLvl){
+        if(ringLvl >= routeTable[0].size()) return null;
         return routeTable[0].get(ringLvl);
     }
 
     public void setClockwiseNeighbour(int ringLvl, Connection neighbour){
-        routeTable[0].add(ringLvl, neighbour);
+        if(ringLvl >= routeTable[0].size()) routeTable[0].add(ringLvl, neighbour);
+        else routeTable[0].set(ringLvl, neighbour);
     }
 
     public void setAnticlockwiseNeighbour(int ringLvl, Connection neighbour){
-        routeTable[1].add(ringLvl, neighbour);
+        if(ringLvl >= routeTable[1].size()) routeTable[1].add(ringLvl, neighbour);
+        else routeTable[1].set(ringLvl, neighbour);
     }
 
     public void setPeerID(int peerID){this.peerID = BitSet.valueOf(new long[] {peerID});}

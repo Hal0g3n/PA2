@@ -115,7 +115,7 @@ public class PeerService {
                 -1,
                 false
         );
-        connectionService.sendMessage(insertionMsg, "127.0.01", 8080);
+        connectionService.sendMessage(insertionMsg, "127.0.0.1", 8080);
     }
 
     private void routeByNumericID(RouteMessage msg){
@@ -124,7 +124,6 @@ public class PeerService {
 
             // if you have the correct numericId, then you should get the message
             // that or you're the closest as can be
-            // the message should be arbitrary
             handleMessage(msg);
             return;
         }
@@ -182,7 +181,29 @@ public class PeerService {
 
     private void insertNode(JoinMessage joinMessage){
         if(joinMessage.isPerformInsertions()){
-            // crap goes here
+            // the joinMessage should have all the neighbours you should have now <3
+            for(int i = 0; i < NUMERIC_ID_LEN; i++){ // numID len is max ring depth
+
+                if(joinMessage.getRingAnticlockwise(i) != null){
+                    head.setAnticlockwiseNeighbour(i, joinMessage.getRingAnticlockwise(i));
+                    Message becomeNeighbour = new Message(
+                            selfConnection,
+                            String.format("clockwise:%d",i),
+                            "neighbour"
+                    );
+                    connectionService.sendMessage(becomeNeighbour, joinMessage.getRingAnticlockwise(i));
+                }
+
+                if(joinMessage.getRingClockwise(i) != null){
+                    head.setClockwiseNeighbour(i, joinMessage.getRingClockwise(i));
+                    Message becomeNeighbour = new Message(
+                            selfConnection,
+                            String.format("anticlockwise:%d",i),
+                            "neighbour"
+                    );
+                    connectionService.sendMessage(becomeNeighbour, joinMessage.getRingClockwise(i));
+                }
+            }
         }
 
         while(joinMessage.getRingLvl() >= 0){
@@ -221,9 +242,6 @@ public class PeerService {
 
         System.out.printf("Handling message %s from %s\n", msgCommand, ctx.channel().remoteAddress());
 
-        //String[] tokens = msg.split(" ");
-        //System.out.println(Arrays.toString(tokens));
-
         switch (msgCommand) {
             case "register" -> {
                 // we need to give the peer its peerNumber and numericID
@@ -249,11 +267,30 @@ public class PeerService {
                 this.selfConnection.setPeerNum(Integer.parseInt(tokens[0]));
                 // now that I have a numericID, I need to insert myself into the skipgraph
                 System.out.printf("Peer registration complete with assigned IDs %s %s\n", tokens[0], tokens[1]);
+                ctx.close();
             }
 
-            case "routing" -> routeByNumericID((RouteMessage) msg);
+            case "routing" -> {
+                routeByNumericID((RouteMessage) msg);
+                ctx.close();
+            }
 
-            case "join" -> insertNode((JoinMessage) msg);
+            case "join" -> {
+                insertNode((JoinMessage) msg);
+                ctx.close();
+            }
+
+            case "neighbour" -> {
+
+                String[] tokens = msg.getMessageContent().split(":");
+                String direction = tokens[0];
+                int ringLvl = Integer.parseInt(tokens[1]);
+                if(direction.equals("clockwise")) {
+                    head.setClockwiseNeighbour(ringLvl, msg.getSourceNode());
+                } else {
+                    head.setAnticlockwiseNeighbour(ringLvl, msg.getSourceNode());
+                }
+            }
         }
 
     }
