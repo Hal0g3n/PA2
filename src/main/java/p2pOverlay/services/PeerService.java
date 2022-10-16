@@ -5,6 +5,7 @@ import p2pOverlay.LanternaMain;
 import p2pOverlay.Peer;
 import p2pOverlay.model.Connection;
 import p2pOverlay.model.message.JoinMessage;
+import p2pOverlay.model.message.LoadBalanceMessage;
 import p2pOverlay.model.message.Message;
 import p2pOverlay.model.message.RouteMessage;
 import p2pOverlay.util.Encoding;
@@ -159,6 +160,21 @@ public class PeerService {
                 false
         );
         connectionService.sendMessage(insertionMsg, "127.0.0.1", 8080);
+    }
+
+    public void requestBalance(){
+        LoadBalanceMessage lbMsg = new LoadBalanceMessage(
+                selfConnection,
+                "",
+                "balance",
+                0,
+                0,
+                0,
+                2,
+                false,
+                true
+        );
+        connectionService.sendMessage(lbMsg, "127.0.0.1", 8080);
     }
 
     private void routeByNumericID(RouteMessage msg){
@@ -329,6 +345,37 @@ public class PeerService {
         }
     }
 
+    private void loadBalance(LoadBalanceMessage lbMsg){
+
+        if(lbMsg.getSourceNode().getNumericID().equals(selfConnection.getNumericID())){
+            // we've gone full loop
+            if(lbMsg.isSumming()){
+                lbMsg.setAverageLoad();
+                lbMsg.setSumming(false);
+            } else {
+                return; // this would be after our second loop
+            }
+        }
+
+        if(lbMsg.getCumLoad() == 0){ // first in the loop
+            lbMsg.setSourceNode(selfConnection); // this would be the gateway
+        }
+        if(lbMsg.isSumming()){
+            lbMsg.setCumLoad(lbMsg.getCumLoad() + head.getLoad());
+            lbMsg.setMembers(lbMsg.getMembers() + 1);
+            connectionService.sendMessage(lbMsg, head.getClockwiseNeighbour(0));
+        } else {
+            if(lbMsg.getThreshold() < head.getLoad()){
+                lbMsg.setMerging(true);
+            }
+            if(lbMsg.isMerging()){
+                // here we shed half our load at each step
+                head.setLoad(head.getLoad()/2);
+                connectionService.sendMessage(lbMsg, head.getClockwiseNeighbour(0));
+            }
+        }
+    }
+
     private boolean liesBetween(int a, int b, int c){
 
         if(c == 0){
@@ -405,6 +452,10 @@ public class PeerService {
                         "retPeerID"
                         );
                 ctx.writeAndFlush(responseMsg);
+            }
+
+            case "balance" -> {
+                loadBalance((LoadBalanceMessage) msg);
             }
         }
         ctx.close();
