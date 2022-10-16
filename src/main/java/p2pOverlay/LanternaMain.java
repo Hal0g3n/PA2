@@ -76,6 +76,7 @@ public class LanternaMain {
             ActionListDialogBuilder actionListDialog = new ActionListDialogBuilder().setTitle("Choose command");
             Panel registeredPanel = constructMessageDialog(actionListDialog, "Already Registered");
 
+
             actionListDialog.addAction("Send Message", new Runnable() {
                         @Override
                         public void run() {
@@ -160,10 +161,12 @@ public class LanternaMain {
                                                 .setLeftMarginSize(1)
                                                 .setRightMarginSize(1));
 
+                                Label title = new Label("Register");
+                                mainPanel.addComponent(title);
+
                                 Label fileLabel = new Label("Input port number");
                                 mainPanel.addComponent(fileLabel);
                                 mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
-
                                 // Config files not implemented yet, will just go with user input port
 //                                Button fileButton = new Button("Open config file", new Runnable() {
 //                                    @Override

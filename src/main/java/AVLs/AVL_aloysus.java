@@ -32,20 +32,20 @@ public class AVL_aloysus<T extends Comparable<? super T>> {
         return root;
     }
 
-    private Node<T> fixTree(T item, Node<T> root) {
+    private Node<T> fixTree(Node<T> root) {
         int balance = getBalance(root);
 
         // left left
-        if (balance > 1 && item.compareTo(root.neighbours[0].getItem()) < 0) return rightRotate(root);
+        if (balance > 1 && getBalance(root.neighbours[0]) >= 0) return rightRotate(root);
         // right right
-        if (balance < -1 && item.compareTo(root.neighbours[1].getItem()) > 0) return leftRotate(root);
+        if (balance < -1 && getBalance(root.neighbours[1]) <= 0) return leftRotate(root);
         // left right
-        if (balance > 1 && item.compareTo(root.neighbours[0].getItem()) > 0) {
+        if (balance > 1 && getBalance(root.neighbours[0]) < 0) {
             root.neighbours[0] = leftRotate(root.neighbours[0]);
             return rightRotate(root);
         }
         // right left
-        if (balance < -1 && item.compareTo(root.neighbours[1].getItem()) < 0) {
+        if (balance < -1 && getBalance(root.neighbours[1]) > 0) {
             root.neighbours[1] = rightRotate(root.neighbours[1]);
             return leftRotate(root);
         }
@@ -66,7 +66,7 @@ public class AVL_aloysus<T extends Comparable<? super T>> {
             curr.neighbours[1] = insert(item,curr.neighbours[1]);
         }
 
-        return fixTree(item, curr);
+        return fixTree(curr);
     }
 
     // Method to delete an item from an AVL tree
@@ -83,12 +83,13 @@ public class AVL_aloysus<T extends Comparable<? super T>> {
         else {
             // one or no children
             if (left == null || right == null) {
-                Node<T> temp;
-                temp = (left != null) ? left : right;
+                int temp;
+                temp = (left != null) ? 0 : 1;
                 // temp will be null if both children are null
                 // if one child exists, temp will become that children.
 
-                curr = temp;
+                curr.setItem(curr.neighbours[temp].getItem());
+                curr.neighbours[temp] = null;
             }
             else {
                 // replace curr with inorder successor which is the smallest in the right subtree which always exists
@@ -98,7 +99,7 @@ public class AVL_aloysus<T extends Comparable<? super T>> {
             }
         }
 
-        return fixTree(item, curr);
+        return fixTree(curr);
     }
 
     private Node<T> getMinNode(Node<T> root) {
