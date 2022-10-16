@@ -4,7 +4,7 @@ import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.ActionListDialogBuilder;
 import com.googlecode.lanterna.gui2.dialogs.FileDialogBuilder;
-import com.googlecode.lanterna.gui2.dialogs.TextInputDialogBuilder;
+import com.googlecode.lanterna.gui2.dialogs.MessageDialogBuilder;
 import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
@@ -15,16 +15,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Arrays;
-import java.util.regex.Pattern;
+import java.util.BitSet;
 
 public class LanternaMain {
 
     private static final int GATEWAY_PORT = 8080;
+    final static Window window = new BasicWindow();
+    static WindowBasedTextGUI textGUI;
 
     // Attempting to convert TempMain to Lanterna
     public static void main(String[] args) {
-        Terminal terminal = null;
+        Terminal terminal;
         DefaultTerminalFactory defaultTerminalFactory = new DefaultTerminalFactory();
 
         // DefaultTerminalFactory decides which terminal to use
@@ -32,10 +33,9 @@ public class LanternaMain {
             terminal = defaultTerminalFactory.createTerminal();
             Screen screen = new TerminalScreen(terminal);
             screen.startScreen();
+            textGUI = new MultiWindowTextGUI(screen);
 
             // Setup WindowBasedTextGUI for dialogs
-            final WindowBasedTextGUI textGUI = new MultiWindowTextGUI(screen);
-            final Window window = new BasicWindow();
 
             // Temp populate peers with 8080-8100
             // Capture system output
@@ -44,7 +44,7 @@ public class LanternaMain {
             PrintStream printStream = new PrintStream(baos);
             PrintStream old = System.out;
             System.setOut(printStream);
-            terminal.setCursorPosition(0,0);
+            terminal.setCursorPosition(0, 0);
             terminal.resetColorAndSGR();
             int rows = 0;
             for (int i = 8080; i < 8100; i++) {
@@ -53,19 +53,19 @@ public class LanternaMain {
 
                 if (i != 8080) ps.register();
 
-                for (String line: baos.toString().split("\n")) {
-                    if (rows ==terminal.getTerminalSize().getRows()) {
+                for (String line : baos.toString().split("\n")) {
+                    if (rows == terminal.getTerminalSize().getRows()) {
                         terminal.clearScreen();
                         rows = 0;
                     }
 
                     terminal.putString(line);
-                    terminal.setCursorPosition(0, terminal.getCursorPosition().getRow()+1);
+                    terminal.setCursorPosition(0, terminal.getCursorPosition().getRow() + 1);
                     terminal.flush();
                     rows++;
                 }
                 baos.reset();
-                terminal.setCursorPosition(0, terminal.getCursorPosition().getRow()+1);
+                terminal.setCursorPosition(0, terminal.getCursorPosition().getRow() + 1);
             }
             System.out.flush();
             System.setOut(old);
@@ -77,6 +77,12 @@ public class LanternaMain {
             actionListDialog.addAction("Choose peer", new Runnable() {
                         @Override
                         public void run() {
+                            new MessageDialogBuilder()
+                                    .setTitle("Oops")
+                                    .setText("Communication with R tree isnt done yet sowwy :(")
+                                    .build()
+                                    .showDialog(textGUI);
+                            actionListDialog.build().showDialog(textGUI);
                         }
                     })
 
@@ -126,13 +132,19 @@ public class LanternaMain {
                             buttonPanel.addComponent(new Button(LocalizedString.OK.toString(), new Runnable() {
                                 @Override
                                 public void run() {
-                                   //int portNumber = Integer.parseInt(textBox.getText());
-                                   //PeerService ps = new PeerService(portNumber);
-                                   //ps.startService();
-                                   //ps.register();
-                                   // TODO: Nicely display if registration successful and if so, give port number
-                                    window.close();
-                                    actionListDialog.build().showDialog(textGUI);
+                                    // TODO: Register using config, now just use a dummy port number
+                                    int portNumber = 8000;
+                                    PeerService ps = new PeerService(portNumber);
+                                    ps.startService();
+                                    ps.register();
+
+                                    if (ps.assignedNum) {
+                                        new MessageDialogBuilder()
+                                                .setTitle("Registration success")
+                                                .setText(String.format("PeerNum: %d, NumericID: %s", ps.getPeerNumber(), ps.getNumericID()))
+                                                .build()
+                                                .showDialog(textGUI);
+                                    }
                                 }
                             }).setLayoutData(GridLayout.createLayoutData(GridLayout.Alignment.CENTER, GridLayout.Alignment.CENTER, true, false)));
                             buttonPanel.addComponent(new Button(LocalizedString.Cancel.toString(), this::onCancel));
