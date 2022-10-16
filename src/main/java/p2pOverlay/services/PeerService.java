@@ -16,12 +16,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class PeerService {
 
-    /*
-     * This should store the Peer object?
-     * The Peer itself will contain information about the connections it should have
-     * This will help Peer interface with the ConnectionService through a ConnectionHandler
-     *
-     * */
 
     public final static int NUMERIC_ID_LEN = 5; // no more than 32 peers in the demo
 
@@ -34,8 +28,6 @@ public class PeerService {
 
     private int peerNumberCounter;
     private Connection selfConnection;
-
-    private ArrayList<Integer> tempCounter;
 
     public boolean assignedNum;
 
@@ -83,7 +75,6 @@ public class PeerService {
         }
         this.peerNumberCounter = 0;
         this.usedId = new HashMap<>();
-        this.tempCounter = new ArrayList<>();
     }
 
 
@@ -223,7 +214,7 @@ public class PeerService {
         if(height > msg.getRingLevel()){
 
             System.out.println("Since height is greater, we're going up");
-
+            // we have found a better ring to continue looping around
             msg.setRingLevel(height);
             msg.setStartNode(selfConnection);
             msg.setBestNode(selfConnection);
@@ -234,6 +225,7 @@ public class PeerService {
         ) < Math.abs(
                 Encoding.BitSetToInt(msg.getBestNode().getNumericID())
                         - Encoding.BitSetToInt(msg.getDestId()) )){
+            // the numericID is closer to the query
             msg.setBestNode(selfConnection);
         }}
 
@@ -333,17 +325,15 @@ public class PeerService {
                         clockwise.getPeerNum()
                 )
             ){
-
-
-
+                // since we lie between, we get to add these neighbours to the arraylists of neighbours to add
                 int ringLvl = joinMessage.getRingLvl();
                 joinMessage.setRingAnticlockwise(ringLvl, selfConnection);
-
                 if(clockwise != null) joinMessage.setRingClockwise(ringLvl, clockwise);
                 else joinMessage.setRingClockwise(ringLvl, selfConnection);
                 System.out.printf("Set c to %d and ac to %d\n",
                         joinMessage.getRingClockwise(ringLvl).getPeerNum(),
                         joinMessage.getRingAnticlockwise(ringLvl).getPeerNum());
+                // move up a level
                 joinMessage.setRingLvl(ringLvl-1);
             } else {
                 connectionService.sendMessage(joinMessage, clockwise); // hand it over to the next
@@ -364,7 +354,10 @@ public class PeerService {
 
             if(joinMessage.getRingAnticlockwise(i) != null){
                 System.out.printf("Requesting insertion from %d\n", Encoding.BitSetToInt(joinMessage.getRingAnticlockwise(i).getNumericID()));
+
+                // set your own anticlockwise neighbour
                 head.setAnticlockwiseNeighbour(i, joinMessage.getRingAnticlockwise(i));
+                // inform the new neighbour to add you as a clockwise neighbour
                 Message becomeNeighbour = new Message(
                         selfConnection,
                         String.format("clockwise:%d",i),
@@ -375,7 +368,9 @@ public class PeerService {
 
             if(joinMessage.getRingClockwise(i) != null){
                 System.out.printf("Requesting insertion from %d\n", Encoding.BitSetToInt(joinMessage.getRingClockwise(i).getNumericID()));
+                // set your own clockwise neighbour
                 head.setClockwiseNeighbour(i, joinMessage.getRingClockwise(i));
+                // inform the new neighbour to add you as an anticlockwise neighbour
                 Message becomeNeighbour = new Message(
                         selfConnection,
                         String.format("anticlockwise:%d",i),
@@ -419,11 +414,14 @@ public class PeerService {
 
     private boolean liesBetween(int a, int b, int c){
 
-        if(c == 0){
+        if(c == 0){ // we exist in a circle, so this is the boundary condition
             if(a < b) return true;
         }
+
+        // check if you are in between the numbers
         if(a < b && b < c || a > b && b > c) return true;
 
+        // this should only happen if they're alone in the ring
         return a == c;
     }
 
@@ -445,7 +443,10 @@ public class PeerService {
                 // we need to give the peer its peerNumber and numericID
                 peerNumberCounter++;
                 int numID = ThreadLocalRandom.current().nextInt(0, (1 << NUMERIC_ID_LEN));
+
+                // we ensure each numericID is unique
                 while(usedId.containsKey(numID)) numID = ThreadLocalRandom.current().nextInt(0, (1 << NUMERIC_ID_LEN));
+
                 usedId.put(numID, true);
                 System.out.printf("Received a registration, assigning IDs %d %d\n", peerNumberCounter, numID);
                 Message responseMsg = new Message(selfConnection,
@@ -480,8 +481,10 @@ public class PeerService {
                 String direction = tokens[0];
                 int ringLvl = Integer.parseInt(tokens[1]);
                 if(direction.equals("clockwise")) {
+                    // add clockwise neighbour based on the command
                     head.setClockwiseNeighbour(ringLvl, msg.getSourceNode());
                 } else {
+                    // add anticlockwise neighbour based on the command
                     head.setAnticlockwiseNeighbour(ringLvl, msg.getSourceNode());
                 }
             }

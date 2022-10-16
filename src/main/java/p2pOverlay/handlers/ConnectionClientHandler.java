@@ -35,7 +35,7 @@ public class ConnectionClientHandler extends SimpleChannelInboundHandler<Object>
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-
+        // when a message is received, we forward it over to PeerService
         Message receivedMsg = (Message) msg;
         System.out.printf("Received %s\n", receivedMsg.getMessageContent());
         ps.handleImmediateMessage(ctx, receivedMsg);

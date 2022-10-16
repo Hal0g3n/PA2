@@ -27,8 +27,7 @@ public class ConnectionService {
 
     /*
     *
-    * Both client and server logic should be handled here
-    * Bootstrap for the server will be init'd here
+    * Client and server is init'd here, with logic being forwarded to PeerService
     *
     * */
 
@@ -101,6 +100,7 @@ public class ConnectionService {
     }
 
     public void sendMessage(Message message, String ip, int port){
+        // we init a connection using Netty bootstrap here
         final SslContext sslCtx;
         try {
             sslCtx = ServerUtil.buildSslContext();
