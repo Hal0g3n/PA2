@@ -11,8 +11,8 @@
 
 
     <properties>
-        <maven.compiler.source>18</maven.compiler.source>
-        <maven.compiler.target>18</maven.compiler.target>
+        <maven.compiler.source>9</maven.compiler.source>
+        <maven.compiler.target>9</maven.compiler.target>
         <kotlin.version>1.7.20</kotlin.version>
     </properties>
 
@@ -84,7 +84,7 @@
     </dependencies>
 
     <build>
-        <testSourceDirectory>test</testSourceDirectory>
+        <testSourceDirectory>src/test</testSourceDirectory>
 
         <plugins>
             <plugin>
@@ -130,6 +130,10 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <source>16</source>
+                    <target>16</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>
