@@ -39,6 +39,15 @@ public class PeerService {
 
     public boolean assignedNum;
 
+    public interface ACKCallback {
+        void onAcknowledge(BitSet numericId);
+    }
+    private ACKCallback onAcknowledge;
+
+    public void registerOnAcknowledge(ACKCallback onAcknowledge) {
+        this.onAcknowledge = onAcknowledge;
+    }
+
 
     public PeerService(int port) {
         this.head = new Peer();
@@ -238,12 +247,25 @@ public class PeerService {
         }
         System.out.printf("Forwarding along the ring to Peer %d @ %s, see ya\n", nextPeer.getPeerNum(), nextPeer.getAddress());
         connectionService.sendMessage(msg, nextPeer);
-        return;
+    }
+
+    public void sendMessage(BitSet destId, String contents) {
+        RouteMessage message = new RouteMessage(
+                selfConnection,
+                "send," + contents,
+                "routing",
+                destId,
+                null,
+                null,
+                -1,
+                false
+        );
+        routeByNumericID(message);
     }
 
     private void handleMessage(Message msg){
         String msgContent = msg.getMessageContent();
-        switch (msgContent){
+        switch (msgContent.split(",")[0]){
             case "insertion" -> {
 
                 // the peer which receives "insertion" is the """Gateway""" for it
@@ -260,6 +282,25 @@ public class PeerService {
                         commonPrefixLen(selfConnection.getNumericID(), msg.getSourceNode().getNumericID())
                 );
                 insertNode(joinMessage);
+            }
+            case "send" -> {
+                String sendMsg = msgContent.split(",")[1];
+                System.out.printf("Received message from %s: %s%n", msg.getSourceNode().getAddress(), sendMsg);
+                System.out.println("Sending back acknowledgement");
+                RouteMessage routeMessage = new RouteMessage(
+                        selfConnection,
+                        "ACK",
+                        "routing",
+                        msg.getSourceNode().getNumericID(),
+                        null,
+                        null,
+                        -1,
+                        false
+                );
+                routeByNumericID(routeMessage);
+            }
+            case "ACK" -> {
+                onAcknowledge.onAcknowledge(msg.getSourceNode().getNumericID());
             }
         }
     }
