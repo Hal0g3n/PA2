@@ -7,6 +7,7 @@
     <groupId>school.nushigh.pa2</groupId>
     <artifactId>PA2</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
 
 
     <properties>
@@ -84,6 +85,7 @@
 
     <build>
         <testSourceDirectory>test</testSourceDirectory>
+
         <plugins>
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
