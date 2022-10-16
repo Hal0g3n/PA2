@@ -16,7 +16,7 @@ public class Peer {
     private static final int NBITS = 32;
     public static ArrayList<Connection>[] routeTable;
     private int peerNumber;
-
+    private int load;
     private BitSet numericID;
 
     // temp arraylist for testing

@@ -3,9 +3,12 @@ package p2pOverlay.services;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import p2pOverlay.Peer;
+import p2pOverlay.model.Connection;
+import p2pOverlay.model.Message;
 import p2pOverlay.model.RouteMessage;
 import p2pOverlay.util.Encoding;
 
+import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -28,8 +31,7 @@ public class PeerService {
 
 
     private int peerNumberCounter;
-
-
+    private Connection selfConnection;
 
     private ArrayList<Integer> tempCounter;
 
@@ -37,7 +39,9 @@ public class PeerService {
     public PeerService(int port) {
         this.head = new Peer();
         this.port = port;
-
+        this.selfConnection = new Connection(new BitSet(NUMERIC_ID_LEN),
+                new InetSocketAddress("127.0.0.1", port)
+                );
         if (this.port == 8080) {
             // this is the gateway node, and will always be the first one in the network
             // this is for simulation purposes, after all
@@ -77,7 +81,10 @@ public class PeerService {
         //                  we will just maintain a counter for peerNumber
 
         // this is extremely cursed, but will make do for now
-        connectionService.sendMessage("register " + port, "127.0.01", 8080);
+
+
+        Message registrationMsg = new Message(selfConnection, "", "register");
+        connectionService.sendMessage(registrationMsg, "127.0.01", 8080);
     }
 
     public void insertNode(int numericId){
@@ -93,7 +100,7 @@ public class PeerService {
             return;
         }
 
-        if(head.getNumericID() == msg.getSourceNode().numericID()){
+        if(head.getNumericID() == msg.getSourceNode().getNumericID()){
             // we have finished this ring, so we go to the next ring
 
         }
@@ -111,18 +118,21 @@ public class PeerService {
     }
 
     private void sendMsg(long sourceId, int targetId, String message, String ip, int port) {
-        connectionService.sendMessage(String.format("ping %d %d %d %s", sourceId, head.getLongId(), targetId, message), ip, port);
+        //connectionService.sendMessage(String.format("ping %d %d %d %s", sourceId, head.getLongId(), targetId, message), ip, port);
     }
 
-    public void handleMessage(ChannelHandlerContext ctx, String msg) {
+    public void handleMessage(ChannelHandlerContext ctx, Message msg) {
 
 
-        System.out.printf("Handling message %s from %s\n", msg, ctx.channel().remoteAddress());
+        String msgCommand = msg.getMessageCommand();
 
-        String[] tokens = msg.split(" ");
-        String command = tokens[0];
-        System.out.println(Arrays.toString(tokens));
-        switch (command) {
+        System.out.printf("Handling message %s from %s\n", msgCommand, ctx.channel().remoteAddress());
+
+        //String[] tokens = msg.split(" ");
+        //System.out.println(Arrays.toString(tokens));
+
+
+        switch (msgCommand) {
 
             case "register" -> {
                 // incoming registration, thus i am the gateway
@@ -130,88 +140,33 @@ public class PeerService {
 
                 // we need to give the peer its peerNumber and numericID
                 peerNumberCounter++;
-                int numID = ThreadLocalRandom.current().nextInt(0, 2 << NUMERIC_ID_LEN + 1);
-                while(usedId.containsKey(numID)) numID = ThreadLocalRandom.current().nextInt(0, 2 << NUMERIC_ID_LEN + 1);
+                int numID = ThreadLocalRandom.current().nextInt(0, 1 << NUMERIC_ID_LEN + 1);
+                while(usedId.containsKey(numID)) numID = ThreadLocalRandom.current().nextInt(0, 1 << NUMERIC_ID_LEN + 1);
                 usedId.put(numID, true);
 
-                
+                System.out.printf("Received a registration, assigning IDs %d %d\n", peerNumberCounter, numID);
 
-                tempCounter.add(Integer.parseInt(tokens[1]));
+                Message responseMsg = new Message(selfConnection,
+                        String.format("%d %d", peerNumberCounter, numID),
+                        "assignedNum");
 
-
-
-                // TODO: Convert these to message object
-
-                String response = "assignedNum " + peerNumberCounter;
-                ByteBuf out = ctx.alloc().buffer(response.length() * 2);
-                out.writeBytes(Encoding.str_to_bb(response));
-                ctx.writeAndFlush(out);
+                ctx.writeAndFlush(responseMsg);
                 ctx.close(); // seems like CTX is blocking...
             }
 
             case "assignedNum" -> {
 
                 // I received a numericID from the gateway
-                head.setPeerNumber(Integer.parseInt(tokens[1])); // set numericID based on gateway response
+
+                // messageContent = peerNumber numID
+                String tokens[] = msg.getMessageContent().split(" ");
+                this.selfConnection.setNumericID(Encoding.intToBitSet(Integer.parseInt(tokens[1]), NUMERIC_ID_LEN));
+                this.head.setPeerNumber(Integer.parseInt(tokens[0]));
                 // now that I have a numericID, I need to insert myself into the skipgraph
-
-                // in this case, once again since deletions will begin with the gateway
-                //          it will simplify the process to an extent, just a bit.
+                System.out.printf("Peer registration complete with assigned IDs %s %s\n", tokens[0], tokens[1]);
             }
 
 
-            case "approved" -> {
-
-                System.out.println("Approved by gateway! Given ID " + tokens[1]);
-            }
-            case "ping" -> { // ping sourceID fromID targetID msg
-
-                int sourceID = Integer.parseInt(tokens[1]);
-                // nextID = head.id anyways
-                int targetID = Integer.parseInt(tokens[3]);
-                String pingMsg = tokens[4];
-
-                if (head.getLongId() == targetID) {
-                    // we now initiate a pong back
-                    // pong sourceID fromID targetID msg
-                    String demoResponse = String.format(
-                            "pong %d %d %d %s",
-                            targetID, head.getLongId(), sourceID, pingMsg);
-                    ByteBuf out = ctx.alloc().buffer(demoResponse.length() * 2);
-                    out.writeBytes(Encoding.str_to_bb(demoResponse));
-                    ctx.writeAndFlush(out);
-                    ctx.close();
-                } else {
-                    // i am an intermediate
-                    // program logic is supposed to determine the next peer to send to
-                    // for now, we only check if we have the peer to send to, which should be true for the gateway
-                    //Connection connection = head.getConnection();
-                    sendMsg(sourceID, targetID, pingMsg, "127.0.0.1", tempCounter.get(1)); // passing the message to peer 2
-                    ctx.close();
-                }
-            }
-            case "pong" -> { // pong sourceID fromID targetID msg
-                // the logic should be similar to ping
-                ctx.close(); // you should usually send back an ACK
-
-                int sourceID = Integer.parseInt(tokens[1]);
-                int targetID = Integer.parseInt(tokens[3]);
-                String pongMsg = tokens[4];
-
-                if (head.getLongId() == targetID) { // i am the one who pong'd
-                    System.out.printf("Received a pong from %d! msg : %s\n", sourceID, pongMsg);
-                } else { // keep passing on the pong
-                    // again, there should be program logic for this
-                    // for now, we just pull the port from tempCounter
-
-                    connectionService.sendMessage(String.format(
-                                    "pong %d %d %d %s",
-                                    sourceID, head.getLongId(), targetID, pongMsg),
-                            "127.0.0.1", tempCounter.get(0));
-                    // we know we have to pong back to peer 1
-
-                }
-            }
         }
 
     }

@@ -30,23 +30,20 @@ public class TempMain {
         ps.startService();
         if(PORT_NUMBER != GATEWAY_PORT) {
             System.out.print("Available commands:\n" +
-                    "1. Get peerID (register)\n" +
-                    "2. Echo peer (echo peerID msg)\n");
+                    "1. Get peerID (register)\n");
             try{
                 while((line = userInput.readLine()) != null){
                     String[] tokens = line.split(" ");
                     System.out.println("Command recognised as: " + tokens[0]);
                     switch(tokens[0]){
                         case "register" -> ps.register();
-                        case "echo" -> ps.sendMsg(Integer.parseInt(tokens[1]), tokens[2]);
                     }
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         } else {
-            System.out.print("GATEWAY NODE commands:\n" +
-                    "1. on receive 'register', type in the peerId ");
+            System.out.print("You are GATEWAY, just chill");
         }
     }
 

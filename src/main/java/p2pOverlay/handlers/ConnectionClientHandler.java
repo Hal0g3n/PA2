@@ -1,9 +1,12 @@
 package p2pOverlay.handlers;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.CharsetUtil;
+import p2pOverlay.model.Message;
 import p2pOverlay.services.PeerService;
 import p2pOverlay.util.Encoding;
 
@@ -11,11 +14,11 @@ import java.nio.ByteBuffer;
 
 public class ConnectionClientHandler extends SimpleChannelInboundHandler<Object> {
 
-    private String content;
+    private Message content;
     private ChannelHandlerContext ctx;
     private PeerService ps;
 
-    public ConnectionClientHandler(String msg, PeerService ps){
+    public ConnectionClientHandler(Message msg, PeerService ps){
         this.content = msg;
         this.ps = ps;
     }
@@ -23,8 +26,11 @@ public class ConnectionClientHandler extends SimpleChannelInboundHandler<Object>
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         this.ctx = ctx;
-        ByteBuf out = ctx.alloc().buffer(content.length()*2).writeBytes(Encoding.str_to_bb(content));
-        ctx.writeAndFlush(out);
+
+        // object is serialised in the channel pipeline... supposedly
+
+        ChannelFuture cf = ctx.writeAndFlush(this.content);
+        cf.addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
     }
 
     @Override
@@ -34,9 +40,9 @@ public class ConnectionClientHandler extends SimpleChannelInboundHandler<Object>
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-        // Server is supposed to send nothing, but if it sends something, discard it.
-        String receivedMsg = ((ByteBuf) msg).toString(CharsetUtil.US_ASCII);
-        System.out.printf("Received %s\n", receivedMsg);
+
+        Message receivedMsg = (Message) msg;
+        System.out.printf("Received %s\n", receivedMsg.getMessageContent());
         ps.handleMessage(ctx, receivedMsg);
         System.out.printf("%s\n", ctx.channel().remoteAddress());
     }

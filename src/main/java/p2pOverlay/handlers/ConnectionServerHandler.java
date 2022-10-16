@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.CharsetUtil;
+import p2pOverlay.model.Message;
 import p2pOverlay.services.PeerService;
 
 public class ConnectionServerHandler extends SimpleChannelInboundHandler {
@@ -20,8 +21,9 @@ public class ConnectionServerHandler extends SimpleChannelInboundHandler {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-        String receivedMsg = ((ByteBuf) msg).toString(CharsetUtil.US_ASCII);
-        System.out.printf("Received %s\n", receivedMsg);
+        //String receivedMsg = ((ByteBuf) msg).toString(CharsetUtil.US_ASCII);
+        Message receivedMsg = (Message) msg;
+        System.out.printf("Received %s\n", receivedMsg.getMessageContent());
         ps.handleMessage(ctx, receivedMsg);
         this.constructedMessage = "";
         System.out.printf("%s\n", ctx.channel().remoteAddress());

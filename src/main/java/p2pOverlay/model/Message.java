@@ -1,12 +1,18 @@
 package p2pOverlay.model;
 
-public class Message {
+import io.netty.handler.codec.MessageToMessageEncoder;
+
+import java.io.Serializable;
+
+public class Message implements Serializable {
     private Connection sourceNode;
     private String messageContent;
+    private String messageCommand;
 
-    public Message(Connection sourceNode, String messageContent) {
+    public Message(Connection sourceNode, String messageContent, String messageCommand) {
         this.sourceNode = sourceNode;
         this.messageContent = messageContent;
+        this.messageCommand = messageCommand;
     }
 
     public Connection getSourceNode() {
@@ -23,5 +29,13 @@ public class Message {
 
     public void setMessageContent(String messageContent) {
         this.messageContent = messageContent;
+    }
+
+    public String getMessageCommand() {
+        return messageCommand;
+    }
+
+    public void setMessageCommand(String messageCommand) {
+        this.messageCommand = messageCommand;
     }
 }

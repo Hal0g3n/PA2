@@ -7,11 +7,15 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import p2pOverlay.handlers.ConnectionClientHandler;
 import p2pOverlay.handlers.ConnectionServerHandler;
+import p2pOverlay.model.Message;
 import p2pOverlay.util.ServerUtil;
 
 import javax.net.ssl.SSLException;
@@ -54,7 +58,11 @@ public class ConnectionService {
                                 if (sslCtx != null) {
                                     p.addLast(sslCtx.newHandler(ch.alloc()));
                                 }
-                                p.addLast(new ConnectionServerHandler(ps));
+                                p.addLast(
+                                        new ObjectEncoder(),
+                                        new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
+                                        new ConnectionServerHandler(ps)
+                                );
                             }
                         });
 
@@ -75,7 +83,7 @@ public class ConnectionService {
         return closeFuture;
     }
 
-    public void sendMessage(String message, String ip, int port){
+    public void sendMessage(Message message, String ip, int port){
         final SslContext sslCtx;
         try {
             sslCtx = ServerUtil.buildSslContext();
@@ -91,7 +99,13 @@ public class ConnectionService {
                                 if (sslCtx != null) {
                                     p.addLast(sslCtx.newHandler(ch.alloc(), ip, port));
                                 }
-                                p.addLast(new ConnectionClientHandler(message, ps));
+
+                                p.addLast(
+                                        new ObjectEncoder(),
+                                        new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
+                                        new ConnectionClientHandler(message, ps)
+                                );
+
                             }
                         });
 
