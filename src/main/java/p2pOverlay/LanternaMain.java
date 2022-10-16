@@ -3,6 +3,7 @@ package p2pOverlay;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.ActionListDialogBuilder;
+import com.googlecode.lanterna.gui2.dialogs.FileDialogBuilder;
 import com.googlecode.lanterna.gui2.dialogs.TextInputDialogBuilder;
 import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
@@ -11,6 +12,7 @@ import com.googlecode.lanterna.terminal.Terminal;
 import p2pOverlay.services.PeerService;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
@@ -92,11 +94,24 @@ public class LanternaMain {
                                             .setLeftMarginSize(1)
                                             .setRightMarginSize(1));
 
-                            mainPanel.addComponent(new Label("Input port number"));
+                            Label fileLabel = new Label("Choose a config file");
+                            mainPanel.addComponent(fileLabel);
                             mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
 
-                            TextBox textBox = new TextBox("").setValidationPattern(Pattern.compile("\\d*"));
-                            textBox.setLayoutData(
+                            Button fileButton = new Button("Open config file", new Runnable() {
+                                @Override
+                                public void run() {
+                                    File input = new FileDialogBuilder()
+                                            .setTitle("Open File")
+                                            .setDescription("Choose a file")
+                                            .setActionLabel("Open")
+                                            .build()
+                                            .showDialog(textGUI);
+                                    System.out.println(input);
+                                    fileLabel.setText(input.getName());
+                                }
+                            });
+                            fileButton.setLayoutData(
                                             GridLayout.createLayoutData(
                                                     GridLayout.Alignment.FILL,
                                                     GridLayout.Alignment.CENTER,
@@ -111,10 +126,10 @@ public class LanternaMain {
                             buttonPanel.addComponent(new Button(LocalizedString.OK.toString(), new Runnable() {
                                 @Override
                                 public void run() {
-                                   int portNumber = Integer.parseInt(textBox.getText());
-                                   PeerService ps = new PeerService(portNumber);
-                                   ps.startService();
-                                   ps.register();
+                                   //int portNumber = Integer.parseInt(textBox.getText());
+                                   //PeerService ps = new PeerService(portNumber);
+                                   //ps.startService();
+                                   //ps.register();
                                    // TODO: Nicely display if registration successful and if so, give port number
                                     window.close();
                                     actionListDialog.build().showDialog(textGUI);
@@ -137,6 +152,7 @@ public class LanternaMain {
                             window.close();
                             actionListDialog.build().showDialog(textGUI);
                         }
+
                     }).build().showDialog(textGUI);
         } catch (IOException e) {
             throw new RuntimeException(e);
