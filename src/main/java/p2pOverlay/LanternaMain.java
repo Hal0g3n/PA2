@@ -1,5 +1,6 @@
 package p2pOverlay;
 
+import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.ActionListDialogBuilder;
 import com.googlecode.lanterna.gui2.dialogs.TextInputDialogBuilder;
@@ -9,7 +10,10 @@ import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
 import p2pOverlay.services.PeerService;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.regex.Pattern;
 
 public class LanternaMain {
@@ -31,77 +35,109 @@ public class LanternaMain {
             final WindowBasedTextGUI textGUI = new MultiWindowTextGUI(screen);
             final Window window = new BasicWindow();
 
-            int PORT_NUMBER = Integer.parseInt(new TextInputDialogBuilder()
-                    .setTitle("Input Port Number")
-                    .setValidationPattern(Pattern.compile("\\d*"), "Port number must be an integer!")
-                    .build()
-                    .showDialog(textGUI)
-            );
+            // Temp populate peers with 8080-8100
+            // Capture system output
+            // Create a stream to hold the output
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PrintStream printStream = new PrintStream(baos);
+            PrintStream old = System.out;
+            System.setOut(printStream);
+            terminal.setCursorPosition(0,0);
+            terminal.resetColorAndSGR();
+            int rows = 0;
+            for (int i = 8080; i < 8100; i++) {
+                PeerService ps = new PeerService(i);
+                ps.startService();
+
+                if (i != 8080) ps.register();
+
+                for (String line: baos.toString().split("\n")) {
+                    if (rows ==terminal.getTerminalSize().getRows()) {
+                        terminal.clearScreen();
+                        rows = 0;
+                    }
+
+                    terminal.putString(line);
+                    terminal.setCursorPosition(0, terminal.getCursorPosition().getRow()+1);
+                    terminal.flush();
+                    rows++;
+                }
+                baos.reset();
+                terminal.setCursorPosition(0, terminal.getCursorPosition().getRow()+1);
+            }
+            System.out.flush();
+            System.setOut(old);
 
 
             ActionListDialogBuilder actionListDialog = new ActionListDialogBuilder().setTitle("Choose command");
 
-            PeerService ps = new PeerService(PORT_NUMBER);
-            ps.startService();
-            if (PORT_NUMBER != GATEWAY_PORT) {
-                // Register
-                actionListDialog.addAction("Register", new Runnable() {
-                            @Override
-                            public void run() {
-                                // TODO: display port id after registering
-                                ps.register();
-                                // Idk how to make this persistent without recalling this every time
-                                actionListDialog.build().showDialog(textGUI);
-                            }
-                        })
+            // Register
+            actionListDialog.addAction("Choose peer", new Runnable() {
+                        @Override
+                        public void run() {
+                        }
+                    })
 
-                        // Echo
-                        .addAction("Echo", new Runnable() {
-                            @Override
-                            public void run() {
-                                Panel echoPanel = new Panel();
-                                echoPanel.setLayoutManager(new GridLayout(2));
+                    // Echo
+                    .addAction("Register", new Runnable() {
+                        @Override
+                        public void run() {
+                            // mfw i cant use the default text input builder cause it kills the actionDialog
+                            // But the code here is essentially the code being used in the default textInputDialog
+                            // Just that i need to change on cancel
 
-                                // Input port ID
-                                echoPanel.addComponent(new Label("Port ID"));
-                                final TextBox portIDTB = new TextBox().setValidationPattern(Pattern.compile("\\d*")).addTo(echoPanel);
+                            Panel mainPanel = new Panel();
+                            mainPanel.setLayoutManager(
+                                    new GridLayout(1)
+                                            .setLeftMarginSize(1)
+                                            .setRightMarginSize(1));
 
-                                // Input message
-                                echoPanel.addComponent(new Label("Message"));
-                                final TextBox msgTB = new TextBox().addTo(echoPanel);
+                            mainPanel.addComponent(new Label("Input port number"));
+                            mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
 
-                                Label resultLabel = new Label("");
-                                echoPanel.addComponent(resultLabel);
-                                echoPanel.addComponent(new EmptySpace());
+                            TextBox textBox = new TextBox("").setValidationPattern(Pattern.compile("\\d*"));
+                            textBox.setLayoutData(
+                                            GridLayout.createLayoutData(
+                                                    GridLayout.Alignment.FILL,
+                                                    GridLayout.Alignment.CENTER,
+                                                    true,
+                                                    false))
+                                    .addTo(mainPanel);
+                            mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
 
-                                // Submit
-                                echoPanel.addComponent(new Button("Submit", new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        String portId = portIDTB.getText();
-                                        String msg = msgTB.getText();
 
-                                        // TODO: get result string from echo
-                                        resultLabel.setText(portId + " " + msg);
-                                    }
-                                }));
-                                // Close
-                                echoPanel.addComponent(new Button("Close", new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        window.close();
-                                        actionListDialog.build().showDialog(textGUI);
-                                    }
-                                }));
-                                window.setComponent(echoPanel);
-                                textGUI.addWindowAndWait(window);
-                            }
-                        }).build().showDialog(textGUI);
-            }
+                            Panel buttonPanel = new Panel();
+                            buttonPanel.setLayoutManager(new GridLayout(2).setHorizontalSpacing(1));
+                            buttonPanel.addComponent(new Button(LocalizedString.OK.toString(), new Runnable() {
+                                @Override
+                                public void run() {
+                                   int portNumber = Integer.parseInt(textBox.getText());
+                                   PeerService ps = new PeerService(portNumber);
+                                   ps.startService();
+                                   ps.register();
+                                   // TODO: Nicely display if registration successful and if so, give port number
+                                    window.close();
+                                    actionListDialog.build().showDialog(textGUI);
+                                }
+                            }).setLayoutData(GridLayout.createLayoutData(GridLayout.Alignment.CENTER, GridLayout.Alignment.CENTER, true, false)));
+                            buttonPanel.addComponent(new Button(LocalizedString.Cancel.toString(), this::onCancel));
+                            buttonPanel.setLayoutData(
+                                            GridLayout.createLayoutData(
+                                                    GridLayout.Alignment.END,
+                                                    GridLayout.Alignment.CENTER,
+                                                    false,
+                                                    false))
+                                    .addTo(mainPanel);
 
-            // actually idk if this is needed but ill keep it here :slight_smile:
-            terminal.flush();
+                            window.setComponent(mainPanel);
+                            textGUI.addWindowAndWait(window);
+                        }
 
+                        private void onCancel() {
+                            window.close();
+                            actionListDialog.build().showDialog(textGUI);
+                        }
+                    }).build().showDialog(textGUI);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

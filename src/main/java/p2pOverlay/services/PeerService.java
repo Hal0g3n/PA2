@@ -84,7 +84,7 @@ public class PeerService {
     public void startService() {
         try {
             this.connectionService = new ConnectionService(this, port);
-            System.out.println("in main, called");
+            System.out.println("Starting 127.0.0.1:" + port);
 
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
