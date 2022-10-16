@@ -1,13 +1,12 @@
 import model.RTree;
 import model.RTreeEntry;
 import model.RTreeNode;
+import model.Range;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.Objects;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RTreeTests {
 
@@ -22,7 +21,34 @@ public class RTreeTests {
         System.out.println(displayRTree(tree.getRoot(), 6));
         tree.delete(new Entry(new Double[]{7.0, 10.0}));
         System.out.println(displayRTree(tree.getRoot(), 3));
-        assertEquals(10, 10);
+    }
+
+    /**
+     * Should return everything as it covers all possible coordinates
+     */
+    @Test
+    void SearchTest() { // Test 3 in our report btw
+        RTree<Entry> tree = new RTree<>(2, 1, 2);
+        Entry[] entries = new Entry[]{
+            new Entry(new Double[]{5.0, 5.0}),
+            new Entry(new Double[]{9.0, 9.0}),
+            new Entry(new Double[]{7.0, 10.0}),
+            new Entry(new Double[]{5.0, 11.0})
+        };
+
+        for (Entry e: entries) tree.insert(e);
+
+        List<Entry> result = tree.search(new Range[]{
+                new Range(Double.MIN_VALUE, Double.MAX_VALUE),
+                new Range(Double.MIN_VALUE, Double.MAX_VALUE)
+        });
+
+        // Sorting both of them using the same function to make comparison fair
+        result.sort((a, b) -> (int) (!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
+        Arrays.sort(entries, (a, b) -> (int) (!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
+
+        // Assert checker
+        assertArrayEquals(result.toArray(), entries);
     }
 
     public static String displayRTree(RTreeNode root, int count) {
@@ -86,7 +112,6 @@ class Entry implements RTreeEntry {
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof Entry) || ((Entry) o).coords.length != this.coords.length) return false;
-        System.out.println(coords.length);
         for (int i = 0; i < coords.length; ++i) {
             if (!Objects.equals(coords[i], ((Entry) o).coords[i])) return false;
         }
