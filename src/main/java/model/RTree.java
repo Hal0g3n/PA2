@@ -311,6 +311,9 @@ public class RTree<T extends RTreeEntry> {
     }
 
     private void adjustTree(RTreeNode<T> node, RTreeNode<T> sibling) {
+        node.tighten();
+        if (sibling != null) sibling.tighten();
+
         if ( node == root ) {
             // There is a sibling to the root? this means node is not the root
             // We need to create a new root!
@@ -331,20 +334,16 @@ public class RTree<T extends RTreeEntry> {
             return;
         }
 
-        // Node is not root
-        node.tighten();
         if ( sibling != null ) { // New Sibling exists
-            sibling.tighten();
-
             // Check if splitting is required
             if ( ((RTreeNode<T>) node.neighbours[3]).getNumChildren() > maxChildren ) {
                 RTreeNode<T>[] splits = splitNode((RTreeNode<T>) node.neighbours[3]);
                 adjustTree(splits[0], splits[1]);
             }
         }
-        else if ( node.neighbours[3] != null ) { // node has parent
+
+        else if ( node.neighbours[3] != null ) // node has parent
             adjustTree((RTreeNode<T>) node.neighbours[3], null);
-        }
     }
 
 

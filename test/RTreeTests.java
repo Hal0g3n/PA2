@@ -76,7 +76,7 @@ public class RTreeTests {
     @Test
     void GenericTest() { // A test to confirm that insertion, deletion and search works in general
         int T = 100; // Number of Trials
-        int N = 7; // Number of random entries test
+        int N = 10; // Number of random entries test
 
         while (T-- > 0) { // For each trial
 
@@ -87,11 +87,6 @@ public class RTreeTests {
             ArrayList<Entry> entries = new ArrayList<>();
             for (int i = 0; i < N; ++i) entries.add(new Entry(Math.random(), Math.random()));
 
-            for (Entry e : entries) {
-                System.out.println(e.toString());
-                tree.insert(e);
-            }
-
             Double[] inputs = new Double[]{Math.random(), Math.random(), Math.random(), Math.random()};
             Arrays.sort(inputs);
 
@@ -100,42 +95,48 @@ public class RTreeTests {
                     new Range(inputs[1], inputs[3])
             };
 
-            List<Entry> result = tree.search(query);
 
             System.out.println("===========================================================");
             System.out.printf("(%f %f) (%f %f)\n", inputs[0], inputs[2], inputs[1], inputs[3]);
 
             System.out.println(max);
+
+            for (Entry e : entries) {
+                tree.insert(e);
+                assertTrue(isValid(tree.getRoot()), displayRTree(tree.getRoot()));
+            }
+
+            List<Entry> result = tree.search(query);
+
             // Manually filter out the entries not in range
             entries.removeIf(e -> !RTreeNode.isInRange(query, e.getParamValues()));
 
-            System.out.println(entries);
 
             // Sorting both of them using the same function to make comparison fair
             result.sort((a, b) -> (int) signum(!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
             entries.sort((a, b) -> (int) signum(!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
 
+            System.out.println(entries);
             System.out.println(result);
-
-            if (!entries.equals(result)) {
-                System.out.println();
-                System.out.println(displayRTree(tree.getRoot()));
-                tree.search(query);
-            }
 
             // Assert checker
             assertArrayEquals(entries.toArray(), result.toArray());
         }
     }
 
-    @Test
-    void test() {
-        RTree<Entry> tree = new RTree<>(2, 1, 2);
+    boolean isValid(RTreeNode<Entry> root) {
+        for (int i = 0; i < 3; ++i) if (root.neighbours[i] != null) {
+            Range<Double>[] ranges = ((RTreeNode<Entry>) root.neighbours[i]).getRanges();
 
-        Entry[] entries = new Entry[]{new Entry(14.331492525120403, 101.79081038448486), new Entry(37.78513474119687, 135.19716702477984), new Entry(55.60313755770421, 114.83302285323091), new Entry(94.83076232997962, 82.81084758601448), new Entry(134.54380553478188, 98.71128097470205), new Entry(136.68742810762413, 50.57049866534822), new Entry(169.1266474492845, 101.64010354234323)};
-        for (Entry e : entries) tree.insert(e);
+            for (int j = 0; j < root.getRanges().length; ++j) {
+                if (root.getRanges()[j].getMin() <= ranges[j].getMin() && ranges[j].getMax() <= root.getRanges()[j].getMax()) continue;
+                return false;
+            }
 
-        System.out.println(displayRTree(tree.getRoot()));
+            if (isValid((RTreeNode<Entry>) root.neighbours[i])) continue;
+            return false;
+        }
+        return true;
     }
 
     public static String displayRTree(RTreeNode root) {

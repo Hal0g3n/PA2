@@ -142,7 +142,7 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
             for (int i = 0; i < ranges.length; i++) { // For each dimension
                 n_ranges[i].setMin(Double.MAX_VALUE);
-                n_ranges[i].setMax(Double.MIN_VALUE);
+                n_ranges[i].setMax(-Double.MAX_VALUE);
 
                 for (Double[] params : elements) { // For each parameter
                     // Replace smallest with the smallest possible
@@ -158,13 +158,13 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
             for (int i = 0; i < ranges.length; i++) { // For each dimension
 
                 n_ranges[i].setMin(Double.MAX_VALUE);
-                n_ranges[i].setMax(Double.MIN_VALUE);
+                n_ranges[i].setMax(-Double.MAX_VALUE);
 
                 // For each child
-                for (int j = 0; j < 2; ++j) if (neighbours[j] != null) {
+                for (int j = 0; j < 3; ++j) if (neighbours[j] != null) {
                     // Compare with running max and min
-                    n_ranges[i].setMax(Math.max(n_ranges[i].getMax(), ((RTreeNode<T>) neighbours[0]).ranges[i].getMax()));
-                    n_ranges[i].setMin(Math.min(n_ranges[i].getMin(), ((RTreeNode<T>) neighbours[0]).ranges[i].getMin()));
+                    n_ranges[i].setMin(Math.min(n_ranges[i].getMin(), ((RTreeNode<T>) neighbours[j]).ranges[i].getMin()));
+                    n_ranges[i].setMax(Math.max(n_ranges[i].getMax(), ((RTreeNode<T>) neighbours[j]).ranges[i].getMax()));
                 }
             }
         }
@@ -174,9 +174,9 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
 
         // Recompute the number of entries in subtree
         numEntries = item.size();
-        for (int i = 0; i < 2; ++i) if (neighbours[i] != null) {
+        for (int i = 0; i < 2; ++i) if (neighbours[i] != null)
             numEntries += ((RTreeNode<T>) neighbours[i]).numEntries;
-        }
+
     }
 
     /**
