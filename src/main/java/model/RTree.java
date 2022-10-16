@@ -206,7 +206,7 @@ public class RTree<T extends RTreeEntry> {
         }
 
         // now n is the root
-        if (n.neighbours[0] == null || n.neighbours[1] == null) {
+        if (n.neighbours[0] == null ^ n.neighbours[1] == null) {
             // roots with one child are not allowed
             RTreeNode<T> child = (RTreeNode<T>) (n.neighbours[0] == null ? n.neighbours[1] : n.neighbours[0]);
             child.neighbours[3] = null;
