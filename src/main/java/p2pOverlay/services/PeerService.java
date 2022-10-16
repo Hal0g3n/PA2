@@ -82,7 +82,6 @@ public class PeerService {
 
         // this is extremely cursed, but will make do for now
 
-
         Message registrationMsg = new Message(selfConnection, "", "register");
         connectionService.sendMessage(registrationMsg, "127.0.01", 8080);
     }
@@ -93,6 +92,7 @@ public class PeerService {
     }
 
     private void routeByNumericID(RouteMessage msg){
+
         if(head.getNumericID() == msg.getDestId()){
 
             // if you have the correct numericId, then you should get the message
@@ -101,10 +101,30 @@ public class PeerService {
         }
 
         if(head.getNumericID() == msg.getSourceNode().getNumericID()){
+            // we just went in a loop!
             // we have finished this ring, so we go to the next ring
-
+            msg.setFinalDestination(true);
+            connectionService.sendMessage(msg, msg.getBestNode());
+            return;
         }
 
+        int height = commonPrefixLen(msg.getSourceNode().getNumericID(), head.getNumericID());
+        if(height > msg.getRingLevel()){
+            msg.setRingLevel(height);
+            msg.setSourceNode(selfConnection);
+            msg.setBestNode(selfConnection);
+        } else if ( Math.abs(
+                Encoding.BitSetToInt(selfConnection.getNumericID())
+                - Encoding.BitSetToInt(msg.getSourceNode().getNumericID())
+        ) < Math.abs(
+                Encoding.BitSetToInt(msg.getBestNode().getNumericID())
+                        - Encoding.BitSetToInt(msg.getSourceNode().getNumericID()) )){
+            msg.setBestNode(selfConnection);
+        }
+
+        Connection nextPeer = head.getClockwiseNeighbour(msg.getRingLevel());
+        connectionService.sendMessage(msg, nextPeer);
+        return;
     }
 
 
@@ -133,23 +153,18 @@ public class PeerService {
 
 
         switch (msgCommand) {
-
             case "register" -> {
                 // incoming registration, thus i am the gateway
                 head.setPeerID(0);
-
                 // we need to give the peer its peerNumber and numericID
                 peerNumberCounter++;
                 int numID = ThreadLocalRandom.current().nextInt(0, 1 << NUMERIC_ID_LEN + 1);
                 while(usedId.containsKey(numID)) numID = ThreadLocalRandom.current().nextInt(0, 1 << NUMERIC_ID_LEN + 1);
                 usedId.put(numID, true);
-
                 System.out.printf("Received a registration, assigning IDs %d %d\n", peerNumberCounter, numID);
-
                 Message responseMsg = new Message(selfConnection,
                         String.format("%d %d", peerNumberCounter, numID),
                         "assignedNum");
-
                 ctx.writeAndFlush(responseMsg);
                 ctx.close(); // seems like CTX is blocking...
             }
@@ -159,13 +174,14 @@ public class PeerService {
                 // I received a numericID from the gateway
 
                 // messageContent = peerNumber numID
-                String tokens[] = msg.getMessageContent().split(" ");
+                String[] tokens = msg.getMessageContent().split(" ");
                 this.selfConnection.setNumericID(Encoding.intToBitSet(Integer.parseInt(tokens[1]), NUMERIC_ID_LEN));
                 this.head.setPeerNumber(Integer.parseInt(tokens[0]));
                 // now that I have a numericID, I need to insert myself into the skipgraph
                 System.out.printf("Peer registration complete with assigned IDs %s %s\n", tokens[0], tokens[1]);
             }
 
+            case "routing" -> routeByNumericID((RouteMessage) msg);
 
         }
 

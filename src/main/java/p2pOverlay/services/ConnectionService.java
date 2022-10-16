@@ -15,10 +15,12 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import p2pOverlay.handlers.ConnectionClientHandler;
 import p2pOverlay.handlers.ConnectionServerHandler;
+import p2pOverlay.model.Connection;
 import p2pOverlay.model.Message;
 import p2pOverlay.util.ServerUtil;
 
 import javax.net.ssl.SSLException;
+import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 
 public class ConnectionService {
@@ -81,6 +83,11 @@ public class ConnectionService {
             throw new RuntimeException(e);
         }
         return closeFuture;
+    }
+
+    public void sendMessage(Message message, Connection connection){
+        InetSocketAddress inetSocketAddress = connection.getAddress();
+        sendMessage(message, inetSocketAddress.getAddress().toString(), inetSocketAddress.getPort());
     }
 
     public void sendMessage(Message message, String ip, int port){

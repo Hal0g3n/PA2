@@ -6,12 +6,22 @@ public class RouteMessage extends Message {
     private BitSet destId;
     private Connection bestNode;
     private int ringLevel;
+    private boolean finalDestination;
 
-    public RouteMessage(Connection sourceNode, String messageContent, String messageCommand, BitSet destId, Connection bestNode, int ringLevel) {
+    public RouteMessage(Connection sourceNode, String messageContent, String messageCommand, BitSet destId, Connection bestNode, int ringLevel, boolean finalDestination) {
         super(sourceNode, messageContent, messageCommand);
         this.destId = destId;
         this.bestNode = bestNode;
         this.ringLevel = ringLevel;
+        this.finalDestination = finalDestination;
+    }
+
+    public boolean isFinalDestination() {
+        return finalDestination;
+    }
+
+    public void setFinalDestination(boolean finalDestination) {
+        this.finalDestination = finalDestination;
     }
 
     public BitSet getDestId() {

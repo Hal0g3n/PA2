@@ -52,4 +52,13 @@ public class Encoding {
         return bitset;
     }
 
+    public static int BitSetToInt(BitSet bs){
+        int n = 0;
+        for(int i = 0; i < bs.length(); i++){
+            if(bs.get(i)) n |= 1;
+            n <<= 1;
+        }
+        return n;
+    }
+
 }
