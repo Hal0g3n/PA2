@@ -61,7 +61,7 @@ public class LanternaMain {
                         rows = 0;
                     }
 
-                    terminal.putString(line);
+                    terminal.putString(line.replaceAll("\\p{Cc}", ""));
                     terminal.setCursorPosition(0, terminal.getCursorPosition().getRow() + 1);
                     terminal.flush();
                     rows++;
