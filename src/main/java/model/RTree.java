@@ -83,10 +83,13 @@ public class RTree<T extends RTreeEntry> {
 
         if (n.isLeaf()) // If leaf, add the children
             // Check if children is overlapping
-            // ** Here I assumed that the entry coordinates are all the same as the leaf node coordinates, so I just check once outside
+            // ** Actually entry coords are a point while the leaf node coords area are a range so still have to check
             // Add Entry to results
             if (RTreeNode.isOverlap(ranges, n.getRanges()))
-                results.addAll(n.getItem());
+                for (T e: n.getItem()) {
+                    if (RTreeNode.isInRange(ranges, e.getParamValues()))
+                        results.add(e);
+                }
         else // If not leaf, travel down the children
             for (int i = 0; i < maxChildren; ++i) { // 2 children
                 // Subtree does not contain the query range or child does not exist
@@ -99,14 +102,11 @@ public class RTree<T extends RTreeEntry> {
 
     /**
      * Deletes the entry associated with the given rectangle from the model.RTree
-     * TODO: delete does not require ranges, fix that
-     * @param ranges ranges of each axis to search in
+     * TODO: delete does not require ranges, fix that (I think can just remove ranges?)
      * @param entry the entry to delete
      * @return true if the entry was deleted from the model.RTree.
      */
-    public boolean delete(Range<Double>[] ranges, T entry) {
-        if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
-
+    public boolean delete(T entry) {
         RTreeNode<T> leaf = findLeaf(root, entry.getParamValues(), entry);
 
         // Some checks
@@ -147,7 +147,6 @@ public class RTree<T extends RTreeEntry> {
 
         if (n.isLeaf())
             for (T e: n.getItem()) {
-                System.out.println(e + " " + entry + " " + e.equals(entry));
                 if (!e.equals(entry)) continue;
                 return n; // RTreeNode found
             }
