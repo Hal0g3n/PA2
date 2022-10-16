@@ -32,16 +32,15 @@ public class RTreeNode<T extends RTreeEntry> extends model.Node<List<T>>{
         return ranges;
     }
 
-    public BitSet getId() {
+    public boolean[] getId() {
         // O(log N) that directly generates id dynamically
         if (neighbours[3] == null)
-            return new BitSet(0);
+            return new boolean[0];
         else {
-            BitSet parentId = ((RTreeNode) neighbours[3]).getId();
-            BitSet id = new BitSet((parentId.size() + 1));
-            id.or(parentId);
+            boolean[] parentId = ((RTreeNode) neighbours[3]).getId();
+            boolean[] id = Arrays.copyOf(parentId, parentId.length + 1);
             if (neighbours[3].neighbours[1] == this)
-                id.set(parentId.size());
+                id[parentId.length] = true;
             return id;
         }
     }

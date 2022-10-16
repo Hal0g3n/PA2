@@ -1,6 +1,7 @@
 package p2pOverlay.services;
 
 import io.netty.channel.ChannelHandlerContext;
+import p2pOverlay.LanternaMain;
 import p2pOverlay.Peer;
 import p2pOverlay.model.Connection;
 import p2pOverlay.model.message.JoinMessage;
@@ -36,6 +37,8 @@ public class PeerService {
 
     private ArrayList<Integer> tempCounter;
 
+    public boolean assignedNum;
+
 
     public PeerService(int port) {
         this.head = new Peer();
@@ -51,6 +54,7 @@ public class PeerService {
             head.setClockwiseNeighbour(i, null);
         }
         this.usedId = new HashMap<>();
+        assignedNum = false;
 
         if (this.port == 8080) {
             // this is the gateway node, and will always be the first one in the network
@@ -382,6 +386,13 @@ public class PeerService {
         return a == c;
     }
 
+    public BitSet getNumericID() {
+        return head.getNumericID();
+    }
+    public int getPeerNumber() {
+        return head.getPeerNumber();
+    }
+
     public void handleImmediateMessage(ChannelHandlerContext ctx, Message msg) {
 
         String msgCommand = msg.getMessageCommand();
@@ -410,6 +421,7 @@ public class PeerService {
                 this.head.setNumericID(Encoding.intToBitSet(Integer.parseInt(tokens[1]), NUMERIC_ID_LEN));
                 this.head.setPeerNumber(Integer.parseInt(tokens[0]));
                 this.selfConnection.setPeerNum(Integer.parseInt(tokens[0]));
+                this.assignedNum = true;
                 // now that I have a numericID, I need to insert myself into the skipgraph
                 System.out.printf("Peer registration complete with assigned IDs %s %s\n", tokens[0], tokens[1]);
             }

@@ -14,6 +14,10 @@ public class RTreeTests {
 
     @Test
     void SampleTest1() {
+        BitSet b = new BitSet();
+        b.set(0);
+        b.set(1);
+        System.out.println(b.size() + " " + b.length());
         RTree<Entry> tree = new RTree<>(2, 1, 2);
         tree.insert(new Entry(5.0, 5.0));
         tree.insert(new Entry(9.0, 9.0));
@@ -149,7 +153,7 @@ public class RTreeTests {
                 --inNodes;
                 RTreeNode node = (RTreeNode) obj;
                 // this node contains something
-                result.append(String.format("%-12s ", Arrays.toString(node.getRanges()) + node.isLeaf() + node.getId().size()));
+                result.append(String.format("%-12s ", Arrays.toString(node.getRanges()) + node.isLeaf() + node.getId().length));
                 if (node.isLeaf()) {
                     entrylist.add(node.getItem().toString());
                 } else {
