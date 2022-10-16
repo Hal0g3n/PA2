@@ -10,18 +10,22 @@ import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
 import p2pOverlay.services.PeerService;
+import p2pOverlay.util.Encoding;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.BitSet;
+import java.util.regex.Pattern;
 
 public class LanternaMain {
 
-    private static final int GATEWAY_PORT = 8080;
     final static Window window = new BasicWindow();
     static WindowBasedTextGUI textGUI;
+    static PeerService registeredService;
+    static boolean registered = false;
+
 
     // Attempting to convert TempMain to Lanterna
     public static void main(String[] args) {
@@ -72,16 +76,71 @@ public class LanternaMain {
 
 
             ActionListDialogBuilder actionListDialog = new ActionListDialogBuilder().setTitle("Choose command");
+            Panel registeredPanel = constructMessageDialog(actionListDialog, "Already Registered");
 
-            // Register
-            actionListDialog.addAction("Choose peer", new Runnable() {
+            actionListDialog.addAction("Send Message", new Runnable() {
                         @Override
                         public void run() {
-                            new MessageDialogBuilder()
-                                    .setTitle("Oops")
-                                    .setText("Communication with R tree isnt done yet sowwy :(")
-                                    .build()
-                                    .showDialog(textGUI);
+                            if (!registered) {
+                                Panel notRegisteredPanel = constructMessageDialog(actionListDialog, "Not Registered!");
+                                window.setComponent(notRegisteredPanel);
+                                textGUI.addWindowAndWait(window);
+                            }
+                            else {
+                                Panel buttonPanel = new Panel();
+                                buttonPanel.setLayoutManager(new GridLayout(2).setHorizontalSpacing(1));
+
+                                Panel mainPanel = new Panel();
+                                mainPanel.setLayoutManager(
+                                        new GridLayout(1)
+                                                .setLeftMarginSize(1)
+                                                .setRightMarginSize(1));
+
+                                mainPanel.addComponent(new Label("Input numeric ID"));
+                                TextBox numericIdTB = new TextBox();
+                                numericIdTB.setLayoutData(
+                                                GridLayout.createLayoutData(
+                                                        GridLayout.Alignment.FILL,
+                                                        GridLayout.Alignment.CENTER,
+                                                        true,
+                                                        false))
+                                        .setValidationPattern(Pattern.compile("\\d*"))
+                                        .addTo(mainPanel);
+                                mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
+
+                                mainPanel.addComponent(new Label("Input message contents"));
+                                TextBox contentTB = new TextBox(new TerminalSize(mainPanel.getSize().getColumns(), 5));
+                                contentTB.setLayoutData(
+                                                GridLayout.createLayoutData(
+                                                        GridLayout.Alignment.FILL,
+                                                        GridLayout.Alignment.CENTER,
+                                                        true,
+                                                        false))
+                                        .addTo(mainPanel);
+                                mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
+
+                                buttonPanel.addComponent(new Button("OK", () -> {
+                                    BitSet destId = BitSet.valueOf(new long[]{Long.parseLong(numericIdTB.getText())});
+                                    String contents = contentTB.getText();
+
+                                    registeredService.registerOnAcknowledge(new PopUpAcknowledge(textGUI));
+                                    registeredService.sendMessage(destId, contents);
+                                }));
+                                buttonPanel.addComponent(new Button(LocalizedString.Cancel.toString(), this::onCancel));
+                                buttonPanel.setLayoutData(
+                                                GridLayout.createLayoutData(
+                                                        GridLayout.Alignment.END,
+                                                        GridLayout.Alignment.CENTER,
+                                                        false,
+                                                        false))
+                                        .addTo(mainPanel);
+                                window.setComponent(mainPanel);
+                                textGUI.addWindowAndWait(window);
+                            }
+                        }
+
+                        private void onCancel() {
+                            window.close();
                             actionListDialog.build().showDialog(textGUI);
                         }
                     })
@@ -93,71 +152,79 @@ public class LanternaMain {
                             // mfw i cant use the default text input builder cause it kills the actionDialog
                             // But the code here is essentially the code being used in the default textInputDialog
                             // Just that i need to change on cancel
+                            if (registered) {
+                                window.setComponent(registeredPanel);
+                                textGUI.addWindowAndWait(window);
+                            } else {
+                                Panel mainPanel = new Panel();
+                                mainPanel.setLayoutManager(
+                                        new GridLayout(1)
+                                                .setLeftMarginSize(1)
+                                                .setRightMarginSize(1));
 
-                            Panel mainPanel = new Panel();
-                            mainPanel.setLayoutManager(
-                                    new GridLayout(1)
-                                            .setLeftMarginSize(1)
-                                            .setRightMarginSize(1));
+                                Label fileLabel = new Label("Choose a config file");
+                                mainPanel.addComponent(fileLabel);
+                                mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
 
-                            Label fileLabel = new Label("Choose a config file");
-                            mainPanel.addComponent(fileLabel);
-                            mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
-
-                            Button fileButton = new Button("Open config file", new Runnable() {
-                                @Override
-                                public void run() {
-                                    File input = new FileDialogBuilder()
-                                            .setTitle("Open File")
-                                            .setDescription("Choose a file")
-                                            .setActionLabel("Open")
-                                            .build()
-                                            .showDialog(textGUI);
-                                    System.out.println(input);
-                                    fileLabel.setText(input.getName());
-                                }
-                            });
-                            fileButton.setLayoutData(
-                                            GridLayout.createLayoutData(
-                                                    GridLayout.Alignment.FILL,
-                                                    GridLayout.Alignment.CENTER,
-                                                    true,
-                                                    false))
-                                    .addTo(mainPanel);
-                            mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
-
-
-                            Panel buttonPanel = new Panel();
-                            buttonPanel.setLayoutManager(new GridLayout(2).setHorizontalSpacing(1));
-                            buttonPanel.addComponent(new Button(LocalizedString.OK.toString(), new Runnable() {
-                                @Override
-                                public void run() {
-                                    // TODO: Register using config, now just use a dummy port number
-                                    int portNumber = 8000;
-                                    PeerService ps = new PeerService(portNumber);
-                                    ps.startService();
-                                    ps.register();
-
-                                    if (ps.assignedNum) {
-                                        new MessageDialogBuilder()
-                                                .setTitle("Registration success")
-                                                .setText(String.format("PeerNum: %d, NumericID: %s", ps.getPeerNumber(), ps.getNumericID()))
+                                Button fileButton = new Button("Open config file", new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        File input = new FileDialogBuilder()
+                                                .setTitle("Open File")
+                                                .setDescription("Choose a file")
+                                                .setActionLabel("Open")
                                                 .build()
                                                 .showDialog(textGUI);
+                                        System.out.println(input);
+                                        fileLabel.setText(input.getName());
                                     }
-                                }
-                            }).setLayoutData(GridLayout.createLayoutData(GridLayout.Alignment.CENTER, GridLayout.Alignment.CENTER, true, false)));
-                            buttonPanel.addComponent(new Button(LocalizedString.Cancel.toString(), this::onCancel));
-                            buttonPanel.setLayoutData(
-                                            GridLayout.createLayoutData(
-                                                    GridLayout.Alignment.END,
-                                                    GridLayout.Alignment.CENTER,
-                                                    false,
-                                                    false))
-                                    .addTo(mainPanel);
+                                });
+                                fileButton.setLayoutData(
+                                                GridLayout.createLayoutData(
+                                                        GridLayout.Alignment.FILL,
+                                                        GridLayout.Alignment.CENTER,
+                                                        true,
+                                                        false))
+                                        .addTo(mainPanel);
+                                mainPanel.addComponent(new EmptySpace(TerminalSize.ONE));
 
-                            window.setComponent(mainPanel);
-                            textGUI.addWindowAndWait(window);
+
+                                Panel buttonPanel = new Panel();
+                                buttonPanel.setLayoutManager(new GridLayout(2).setHorizontalSpacing(1));
+                                buttonPanel.addComponent(new Button(LocalizedString.OK.toString(), () -> {
+                                    // TODO: Register using config, now just use a dummy port number
+                                    if (registered) {
+                                        window.setComponent(registeredPanel);
+                                        textGUI.addWindowAndWait(window);
+                                    }
+                                    else {
+                                        int portNumber = 8000;
+                                        registeredService = new PeerService(portNumber);
+                                        registeredService.startService();
+                                        registeredService.register();
+                                        registered = true;
+
+                                        if (registeredService.assignedNum) {
+                                            new MessageDialogBuilder()
+                                                    .setTitle("Registration success")
+                                                    .setText(String.format("PeerNum: %d, NumericID: %s", registeredService.getPeerNumber(), registeredService.getNumericID()))
+                                                    .build()
+                                                    .showDialog(textGUI);
+                                        }
+                                    }
+                                }).setLayoutData(GridLayout.createLayoutData(GridLayout.Alignment.CENTER, GridLayout.Alignment.CENTER, true, false)));
+                                buttonPanel.addComponent(new Button(LocalizedString.Cancel.toString(), this::onCancel));
+                                buttonPanel.setLayoutData(
+                                                GridLayout.createLayoutData(
+                                                        GridLayout.Alignment.END,
+                                                        GridLayout.Alignment.CENTER,
+                                                        false,
+                                                        false))
+                                        .addTo(mainPanel);
+
+                                window.setComponent(mainPanel);
+                                textGUI.addWindowAndWait(window);
+                            }
                         }
 
                         private void onCancel() {
@@ -169,5 +236,47 @@ public class LanternaMain {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static Panel constructMessageDialog(ActionListDialogBuilder actionListDialog, String description) {
+        Panel buttonPanel = new Panel();
+        buttonPanel.setLayoutManager(new GridLayout(1).setHorizontalSpacing(1));
+        buttonPanel.addComponent(new Button("OK", () -> {
+            window.close();
+            actionListDialog.build().showDialog(textGUI);
+        }));
+
+        Panel panel = new Panel();
+        panel.setLayoutManager(
+                new GridLayout(1)
+                        .setLeftMarginSize(1)
+                        .setRightMarginSize(1));
+        panel.addComponent(new Label(description));
+        panel.addComponent(new EmptySpace(TerminalSize.ONE));
+        buttonPanel.setLayoutData(
+                        GridLayout.createLayoutData(
+                                GridLayout.Alignment.END,
+                                GridLayout.Alignment.CENTER,
+                                false,
+                                false))
+                .addTo(panel);
+
+        return panel;
+    }
+
+}
+
+class PopUpAcknowledge implements PeerService.ACKCallback {
+    private WindowBasedTextGUI textGUI;
+    public PopUpAcknowledge(WindowBasedTextGUI textGUI) {
+        this.textGUI = textGUI;
+    }
+    @Override
+    public void onAcknowledge(BitSet numericId) {
+        new MessageDialogBuilder()
+                .setTitle("Message Acknowledged")
+                .setText(String.format("ID %d has acknowledged your message", Encoding.BitSetToInt(numericId)))
+                .build()
+                .showDialog(textGUI);
     }
 }
