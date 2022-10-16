@@ -130,12 +130,12 @@ public class PeerService {
             return;
         }
 
-        if(msg.getSourceNode() != null){
+        if(msg.getStartNode() != null){
             System.out.printf("Source node is no longer null, %s == %s?\n",
                 Encoding.bitSetToString(head.getNumericID()),
-                    Encoding.bitSetToString(msg.getSourceNode().getNumericID())
+                    Encoding.bitSetToString(msg.getStartNode().getNumericID())
             );
-        if(head.getNumericID().equals(msg.getSourceNode().getNumericID())){
+        if(head.getNumericID().equals(msg.getStartNode().getNumericID())){
             // we just went in a loop!
             // we have finished this ring, so we should be good
             msg.setFinalDestination(true);
@@ -155,7 +155,7 @@ public class PeerService {
             System.out.println("Since height is greater, we're going up");
 
             msg.setRingLevel(height);
-            msg.setSourceNode(selfConnection);
+            msg.setStartNode(selfConnection);
             msg.setBestNode(selfConnection);
         } else if(msg.getBestNode() != null)
         {if ( Math.abs(
@@ -181,6 +181,7 @@ public class PeerService {
                 // the peer which receives "insertion" is the """Gateway""" for it
                 // it will start sending the join message to its friends
                 Connection joiningNode = msg.getSourceNode();
+                System.out.printf("The joining node has numeric id %d\n", Encoding.BitSetToInt(joiningNode.getNumericID()));
                 JoinMessage joinMessage = new JoinMessage(
                         selfConnection,
                         "join",
@@ -196,30 +197,14 @@ public class PeerService {
     }
 
     private void insertNode(JoinMessage joinMessage){
+
+        System.out.printf("Received join message at ring lvl %d\n", joinMessage.getRingLvl());
+
         if(joinMessage.isPerformInsertions()){
+            System.out.println("Looks like im here to ask for some insertions");
             // the joinMessage should have all the neighbours you should have now <3
-            for(int i = 0; i < NUMERIC_ID_LEN; i++){ // numID len is max ring depth
-
-                if(joinMessage.getRingAnticlockwise(i) != null){
-                    head.setAnticlockwiseNeighbour(i, joinMessage.getRingAnticlockwise(i));
-                    Message becomeNeighbour = new Message(
-                            selfConnection,
-                            String.format("clockwise:%d",i),
-                            "neighbour"
-                    );
-                    connectionService.sendMessage(becomeNeighbour, joinMessage.getRingAnticlockwise(i));
-                }
-
-                if(joinMessage.getRingClockwise(i) != null){
-                    head.setClockwiseNeighbour(i, joinMessage.getRingClockwise(i));
-                    Message becomeNeighbour = new Message(
-                            selfConnection,
-                            String.format("anticlockwise:%d",i),
-                            "neighbour"
-                    );
-                    connectionService.sendMessage(becomeNeighbour, joinMessage.getRingClockwise(i));
-                }
-            }
+            insertIntoRings(joinMessage);
+            return;
         }
 
         while(joinMessage.getRingLvl() >= 0){
@@ -229,15 +214,20 @@ public class PeerService {
             if(clockwise == null || // there should be a short circuit
                     // if not, then make sure that it lies between
                 liesBetween(
-                        joinMessage.getJoiningNode().getPeerNum(),
                         head.getPeerNumber(),
+                        joinMessage.getJoiningNode().getPeerNum(),
                         clockwise.getPeerNum()
                 )
             ){
-                joinMessage.setRingAnticlockwise(joinMessage.getRingLvl(), selfConnection);
-                if(clockwise != null) joinMessage.setRingClockwise(joinMessage.getRingLvl(), clockwise);
-                else joinMessage.setRingClockwise(joinMessage.getRingLvl(), selfConnection);
-                joinMessage.setRingLvl(joinMessage.getRingLvl()-1);
+                int ringLvl = joinMessage.getRingLvl();
+                joinMessage.setRingAnticlockwise(ringLvl, selfConnection);
+
+                if(clockwise != null) joinMessage.setRingClockwise(ringLvl, clockwise);
+                else joinMessage.setRingClockwise(ringLvl, selfConnection);
+                System.out.printf("Set c to %d and ac to %d\n",
+                        joinMessage.getRingClockwise(ringLvl).getPeerNum(),
+                        joinMessage.getRingAnticlockwise(ringLvl).getPeerNum());
+                joinMessage.setRingLvl(ringLvl-1);
             } else {
                 connectionService.sendMessage(joinMessage, clockwise); // hand it over to the next
                 return;
@@ -246,6 +236,37 @@ public class PeerService {
 
         joinMessage.setPerformInsertions(true);
         connectionService.sendMessage(joinMessage, joinMessage.getJoiningNode());
+    }
+
+    private void insertIntoRings(JoinMessage joinMessage){
+        for(int i = 0; i <= joinMessage.getOriginalLvl(); i++){ // numID len is max ring depth
+            System.out.printf("Making request at lvl %d where c is %d and ac is %d\n",
+                    i,
+                    joinMessage.getRingClockwise(i).getPeerNum(),
+                    joinMessage.getRingAnticlockwise(i).getPeerNum());
+
+            if(joinMessage.getRingAnticlockwise(i) != null){
+                System.out.printf("Requesting insertion from %d\n", Encoding.BitSetToInt(joinMessage.getRingAnticlockwise(i).getNumericID()));
+                head.setAnticlockwiseNeighbour(i, joinMessage.getRingAnticlockwise(i));
+                Message becomeNeighbour = new Message(
+                        selfConnection,
+                        String.format("clockwise:%d",i),
+                        "neighbour"
+                );
+                connectionService.sendMessage(becomeNeighbour, joinMessage.getRingAnticlockwise(i));
+            }
+
+            if(joinMessage.getRingClockwise(i) != null){
+                System.out.printf("Requesting insertion from %d\n", Encoding.BitSetToInt(joinMessage.getRingClockwise(i).getNumericID()));
+                head.setClockwiseNeighbour(i, joinMessage.getRingClockwise(i));
+                Message becomeNeighbour = new Message(
+                        selfConnection,
+                        String.format("anticlockwise:%d",i),
+                        "neighbour"
+                );
+                connectionService.sendMessage(becomeNeighbour, joinMessage.getRingClockwise(i));
+            }
+        }
     }
 
     private boolean liesBetween(int a, int b, int c){
@@ -307,6 +328,7 @@ public class PeerService {
                 } else {
                     head.setAnticlockwiseNeighbour(ringLvl, msg.getSourceNode());
                 }
+                ctx.close();
             }
         }
 

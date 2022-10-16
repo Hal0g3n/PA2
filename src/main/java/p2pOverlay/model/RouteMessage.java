@@ -49,4 +49,12 @@ public class RouteMessage extends Message {
     public void setRingLevel(int ringLevel) {
         this.ringLevel = ringLevel;
     }
+
+    public Connection getStartNode() {
+        return startNode;
+    }
+
+    public void setStartNode(Connection startNode) {
+        this.startNode = startNode;
+    }
 }
