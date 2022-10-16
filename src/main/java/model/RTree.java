@@ -127,11 +127,31 @@ public class RTree<T extends RTreeEntry> {
         return false;
     }
 
+    /**
+     * Called to propagate the deletion of a node
+     * @param node - The GhostNode to delete
+     * @return
+     */
+    public boolean delete(GhostNode<T> node) {
+        if (node.getRanges().length != numDims) throw new IllegalArgumentException("输入的范围大小不对");
 
-    public boolean delete(Range<Double>[] ranges, GhostNode<T> entry) {
-        if (ranges.length != numDims) throw new IllegalArgumentException("输入的数组大小不对");
+        RTreeNode<T> parent = root; // parent of n_node (will be found soon)
 
-        // TODO: implement properly
+        for (int lvl = 0; lvl < node.getId().size(); ++lvl) {
+
+            for (Node<List<T>> child : parent.neighbours) {
+                if (child != node) continue;
+
+                // Child found, delete it and condense tree
+                parent.removeChild((RTreeNode<T>) child);
+                condenseTree(parent);
+                return true;
+            }
+
+            // Not found at this level, go down
+            parent = (RTreeNode<T>) root.neighbours[node.getId().get(lvl) ? 1 : 0];
+        }
+
         return false;
     }
 
@@ -229,10 +249,31 @@ public class RTree<T extends RTreeEntry> {
     /**
      * Inserting the ghost node
      * Called to propagate changes from other branches
-     * TODO: actually finish this
      */
     public void insert(GhostNode<T> n_node) {
+        RTreeNode<T> parent = root; // parent of n_node (will be found soon)
 
+        for (int lvl = 0; lvl < n_node.getId().size(); ++lvl) {
+            // If we cannot take the next step, we insert here
+            if (parent.neighbours[n_node.getId().get(lvl) ? 1 : 0] == null || !(parent.neighbours[n_node.getId().get(lvl) ? 1 : 0] instanceof GhostNode)) {
+                // Add to parent
+                parent.addChild(n_node);
+
+                // It is time to die parent, you are too fat
+                if ( parent.neighbours.length > maxChildren ) {
+                    RTreeNode<T>[] splits = splitNode(parent);
+                    adjustTree(splits[0], splits[1]);
+                }
+                // No splitting, just adjust the tree
+                else adjustTree(parent, null);
+
+                // Insertion Successful
+                return;
+            }
+            else parent = (RTreeNode<T>) root.neighbours[n_node.getId().get(lvl) ? 1 : 0];
+        }
+
+        throw new IllegalStateException("找不到输入顶点的长辈");
     }
 
 
@@ -308,8 +349,6 @@ public class RTree<T extends RTreeEntry> {
                 adjustTree(splits[0], splits[1]);
             }
         }
-        // Actually is this necessary?? If there is no new node, why recurse up?
-        // @PC
         else if ( node.neighbours[3] != null ) { // node has parent
             adjustTree((RTreeNode<T>) node.neighbours[3], null);
         }
