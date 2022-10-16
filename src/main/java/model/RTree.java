@@ -469,8 +469,8 @@ public class RTree<T extends RTreeEntry> {
                     nMaxLb = e;
                 }
 
-                // The lowest upper bound
-                if ( e.getRanges()[dim].getMax() < dimMinUb ) {
+                // The Smallest upper bound
+                else if ( e.getRanges()[dim].getMax() < dimMinUb ) {
                     dimMinUb = e.getRanges()[dim].getMax();
                     nMinUb = e;
                 }
@@ -488,7 +488,6 @@ public class RTree<T extends RTreeEntry> {
             }
         }
 
-        // Removes from list and returns the picked Seeds
         children.remove(bestPair.get(0));
         children.remove(bestPair.get(1));
         return bestPair;
