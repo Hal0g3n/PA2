@@ -63,11 +63,11 @@ public class Peer {
     }
 
     public void setClockwiseNeighbour(int ringLvl, Connection neighbour){
-        routeTable[0].set(ringLvl, neighbour);
+        routeTable[0].add(ringLvl, neighbour);
     }
 
     public void setAnticlockwiseNeighbour(int ringLvl, Connection neighbour){
-        routeTable[1].set(ringLvl, neighbour);
+        routeTable[1].add(ringLvl, neighbour);
     }
 
     public void setPeerID(int peerID){this.peerID = BitSet.valueOf(new long[] {peerID});}

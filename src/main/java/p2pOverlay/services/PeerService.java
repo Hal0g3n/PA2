@@ -48,6 +48,7 @@ public class PeerService {
             head.setAnticlockwiseNeighbour(i, null);
             head.setClockwiseNeighbour(i, null);
         }
+        this.usedId = new HashMap<>();
 
         if (this.port == 8080) {
             // this is the gateway node, and will always be the first one in the network
