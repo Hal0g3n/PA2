@@ -3,6 +3,8 @@ import model.RTreeEntry;
 import model.RTreeNode;
 import model.Range;
 import org.junit.jupiter.api.Test;
+
+import static java.lang.Math.signum;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.*;
@@ -18,9 +20,9 @@ public class RTreeTests {
         tree.insert(new Entry(7.0, 10.0));
         tree.insert(new Entry(5.0, 11.0));
         System.out.println();
-        System.out.println(displayRTree(tree.getRoot(), 6));
+        System.out.println(displayRTree(tree.getRoot()));
         tree.delete(new Entry(7.0, 10.0));
-        System.out.println(displayRTree(tree.getRoot(), 3));
+        System.out.println(displayRTree(tree.getRoot()));
     }
 
     /**
@@ -43,6 +45,7 @@ public class RTreeTests {
                 new Range(Double.MIN_VALUE, Double.MAX_VALUE)
         });
 
+        System.out.println(displayRTree(tree.getRoot()));
         // Sorting both of them using the same function to make comparison fair
         result.sort((a, b) -> (int) (!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
         Arrays.sort(entries, (a, b) -> (int) (!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
@@ -56,7 +59,7 @@ public class RTreeTests {
      */
     @Test
     void GenericTest() { // A test to confirm that insertion, deletion and search works in general
-        int T = 10; // Number of Trials
+        int T = 100; // Number of Trials
         int N = 10; // Number of random entries test
 
         while (T-- > 0) { // For each trial
@@ -83,52 +86,67 @@ public class RTreeTests {
             entries.removeIf(e -> !RTreeNode.isInRange(query, e.getParamValues()));
 
             // Sorting both of them using the same function to make comparison fair
-            result.sort((a, b) -> (int) (!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
-            entries.sort((a, b) -> (int) (!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
+            result.sort((a, b) -> (int) signum(!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
+            entries.sort((a, b) -> (int) signum(!Objects.equals(a.coords[0], b.coords[0]) ? a.coords[0] - b.coords[0] : a.coords[1] - b.coords[1]));
+
+            System.out.println("===========================================================");
+            System.out.printf("(%f %f) (%f %f)\n", inputs[0], inputs[2], inputs[1], inputs[3]);
+            System.out.println(entries);
+            System.out.println(result);
+
+            if (result.size() != entries.size()) {
+                System.out.println();
+                System.out.println(displayRTree(tree.getRoot()));
+                tree.search(query);
+            }
 
             // Assert checker
-            assertArrayEquals(result.toArray(), entries.toArray());
+            assertArrayEquals(entries.toArray(), result.toArray());
         }
     }
 
-    public static String displayRTree(RTreeNode root, int count) {
-        String result = "";
+    public static String displayRTree(RTreeNode root) {
+        StringBuilder result = new StringBuilder();
         LinkedList<Object> queue = new LinkedList<>();
         int level = 1;
-        int remainingNodes = count;
+        int inNodes = 1;
         int num = 0;
         queue.add(root);
         LinkedList<String> entrylist = new LinkedList<>();
-        while (remainingNodes > 0) {
-            Object obj = queue.remove();
+        while (inNodes > 0) {
+            Object obj = queue.remove(); --inNodes;
             if (obj != null) {
                 RTreeNode node = (RTreeNode) obj;
                 // this node contains something
-                result += String.format("%-12s ", Arrays.toString(node.getRanges()) + node.isLeaf());
+                result.append(String.format("%-12s ", Arrays.toString(node.getRanges()) + node.isLeaf()));
                 if (node.isLeaf()) {
                     entrylist.add(node.getItem().toString());
                 } else {
                     queue.add(node.neighbours[0]);
                     queue.add(node.neighbours[1]);
+
+                    inNodes += node.neighbours[0] == null ? 0 : 1;
+                    inNodes += node.neighbours[1] == null ? 0 : 1;
                 }
-                --remainingNodes;
             } else {
-                result += "            ";
+                result.append("            ");
                 queue.add(null);
                 queue.add(null);
             }
             ++num;
             // check for breakline
             if (num >= Math.pow(2, level) - 1) {
-                result += "\n";
+                result.append("\n");
                 ++level;
             }
         }
-        result += "\n";
+        result.append("\n");
+
         // entries
         for (String e: entrylist)
-            result += e + " ";
-        return result;
+            result.append(e).append(" ");
+
+        return result.toString();
     }
 }
 
