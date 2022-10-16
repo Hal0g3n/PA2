@@ -469,8 +469,8 @@ public class RTree<T extends RTreeEntry> {
                     nMaxLb = e;
                 }
 
-                // The lowest upper bound
-                if ( e.getRanges()[dim].getMax() < dimMinUb ) {
+                // The Smallest upper bound
+                else if ( e.getRanges()[dim].getMax() < dimMinUb ) {
                     dimMinUb = e.getRanges()[dim].getMax();
                     nMinUb = e;
                 }

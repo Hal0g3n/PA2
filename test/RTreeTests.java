@@ -75,8 +75,8 @@ public class RTreeTests {
      */
     @Test
     void GenericTest() { // A test to confirm that insertion, deletion and search works in general
-        int T = 10000; // Number of Trials
-        int N = 6; // Number of random entries test
+        int T = 100; // Number of Trials
+        int N = 7; // Number of random entries test
 
         while (T-- > 0) { // For each trial
 
@@ -85,15 +85,14 @@ public class RTreeTests {
             RTree<Entry> tree = new RTree<>(max, 1, 2);
 
             ArrayList<Entry> entries = new ArrayList<>();
-            for (int i = 0; i < N; ++i) entries.add(new Entry(Math.random() * 200, Math.random() * 200));
+            for (int i = 0; i < N; ++i) entries.add(new Entry(Math.random(), Math.random()));
 
             for (Entry e : entries) {
                 System.out.println(e.toString());
                 tree.insert(e);
             }
 
-//            Double[] inputs = new Double[]{Math.random(), Math.random(),Math.random(), Math.random()};
-            Double[] inputs = new Double[]{Double.MIN_VALUE, Double.MAX_VALUE, Double.MIN_VALUE, Double.MAX_VALUE};
+            Double[] inputs = new Double[]{Math.random(), Math.random(), Math.random(), Math.random()};
             Arrays.sort(inputs);
 
             Range[] query = new Range[]{
